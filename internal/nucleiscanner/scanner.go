@@ -30,6 +30,7 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
+	"github.com/ai-agent-monitor/internal/constants"
 	"github.com/ai-agent-monitor/internal/consumer"
 	outpkg "github.com/ai-agent-monitor/internal/output"
 )
@@ -40,23 +41,6 @@ const (
 	// discoveryDialTimeout is the TCP dial timeout used during port probing.
 	discoveryDialTimeout = 500 * time.Millisecond
 )
-
-// aiServicePorts maps known AI/ML service ports to human-readable service names.
-// When a net_connect to localhost on any of these ports is observed, a Nuclei
-// scan is triggered against that endpoint.
-var aiServicePorts = map[uint16]string{
-	6333:  "qdrant",
-	6334:  "qdrant-grpc",
-	8000:  "chromadb",
-	8080:  "weaviate",
-	19530: "milvus",
-	9200:  "elasticsearch",
-	11434: "ollama",
-	8001:  "vllm",
-	7860:  "gradio",
-	8501:  "streamlit",
-	3000:  "localai",
-}
 
 // scanMeta correlates an active scan back to the session that triggered it.
 type scanMeta struct {
@@ -151,10 +135,10 @@ func (s *Scanner) MaybeScan(ctx context.Context, ev *consumer.EnrichedEvent) {
 	if ev.EventType != "net_connect" || ev.Network == nil {
 		return
 	}
-	if !isLocalhost(ev.Network.DstIP) {
+	if !constants.IsLocalhost(ev.Network.DstIP) {
 		return
 	}
-	svcName, ok := aiServicePorts[ev.Network.DstPort]
+	svcName, ok := constants.AIServicePorts[ev.Network.DstPort]
 	if !ok {
 		return
 	}
@@ -194,7 +178,7 @@ func (s *Scanner) periodicDiscover(ctx context.Context) {
 // discoverServices TCP-dials each known AI service port on 127.0.0.1.
 // Open ports are passed to triggerScan (dedup prevents re-scanning within TTL).
 func (s *Scanner) discoverServices(ctx context.Context) {
-	for port, svcName := range aiServicePorts {
+	for port, svcName := range constants.AIServicePorts {
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		conn, err := net.DialTimeout("tcp", addr, discoveryDialTimeout)
 		if err != nil {
@@ -311,7 +295,7 @@ func (s *Scanner) handleResult(ctx context.Context, event *output.ResultEvent) {
 		Ppid:         ppid,
 		Comm:         comm,
 		AISessionID:  sessionID,
-		RiskScore:    severityScore(severity),
+		RiskScore:    constants.SeverityScore(severity),
 		Tags:         []string{"nuclei_finding", event.TemplateID},
 		NucleiResult: finding,
 	}
@@ -341,11 +325,6 @@ func (s *Scanner) Close() {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-// isLocalhost returns true if ip is a loopback address.
-func isLocalhost(ip string) bool {
-	return ip == "127.0.0.1" || ip == "::1" || strings.HasPrefix(ip, "127.")
-}
-
 // dirHasYAML reports whether dir (recursively) contains at least one .yaml/.yml file.
 // Used to detect an empty or missing template directory before engine init.
 func dirHasYAML(dir string) bool {
@@ -366,21 +345,4 @@ func dirHasYAML(dir string) bool {
 		}
 	}
 	return false
-}
-
-// severityScore maps Nuclei severity strings to risk score deltas.
-// These are additive — they combine with the behavioral detector's score.
-func severityScore(sev string) int {
-	switch strings.ToLower(sev) {
-	case "critical":
-		return 100
-	case "high":
-		return 70
-	case "medium":
-		return 40
-	case "low":
-		return 20
-	default: // "info" or unknown
-		return 10
-	}
 }

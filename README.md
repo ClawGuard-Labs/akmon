@@ -474,6 +474,8 @@ clawsec/
 ├── cmd/monitor/
 │   └── main.go                # Entry point, flag parsing, pipeline wiring
 ├── internal/
+|   ├── constants/
+|   |   ├── helpers.go
 │   ├── consumer/
 │   │   ├── consumer.go        # Ring buffer reader
 │   │   └── events.go          # Binary event structs + decoder + NucleiResult
@@ -499,8 +501,6 @@ clawsec/
 │   └── session/
 ├── nuclei-templates/           # Active scanning rules (Nuclei v3 HTTP format)
 │   └── ai-services/
-├── proto/
-│   └── events.proto            # gRPC service definition (future)
 ├── go.mod
 ├── go.sum
 └── Makefile

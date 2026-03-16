@@ -58,27 +58,64 @@ type EventWriter interface {
 
 // ── Flat NDJSON writer ────────────────────────────────────────────────────────
 
+// sseBroadcaster is an embedded struct that handles SSE client registration,
+// fanout, and the HTTP server. Both Writer and GroupedWriter embed it to
+// avoid duplicating the fanoutSSE / startSSE / handleSSE methods.
+type sseBroadcaster struct {
+	clients map[chan []byte]struct{}
+	mu      sync.RWMutex
+	logger  *zap.Logger
+}
+
+func newSSEBroadcaster(logger *zap.Logger) sseBroadcaster {
+	return sseBroadcaster{clients: make(map[chan []byte]struct{}), logger: logger}
+}
+
+func (b *sseBroadcaster) fanout(data []byte) {
+	b.mu.RLock()
+	for ch := range b.clients {
+		select {
+		case ch <- data:
+		default:
+		}
+	}
+	b.mu.RUnlock()
+}
+
+func (b *sseBroadcaster) handleSSE(rw http.ResponseWriter, r *http.Request) {
+	ch := sseConnect(rw, r, b.logger)
+	defer sseDisconnect(rw, r, ch, &b.mu, b.clients, b.logger)
+
+	b.mu.Lock()
+	b.clients[ch] = struct{}{}
+	b.mu.Unlock()
+
+	sseStream(rw, r, ch)
+}
+
+func (b *sseBroadcaster) startSSE(addr string) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/events", b.handleSSE)
+	mux.HandleFunc("/healthz", healthz)
+	listenAndServe(addr, mux, b.logger)
+}
+
 // Writer handles flat JSON serialisation and SSE distribution.
 type Writer struct {
-	mu     sync.Mutex
-	w      io.Writer
-	logger *zap.Logger
-
-	// SSE broadcaster
-	sseClients map[chan []byte]struct{}
-	sseMu      sync.RWMutex
+	mu  sync.Mutex
+	w   io.Writer
+	sse sseBroadcaster
 }
 
 // New creates a Writer that emits flat NDJSON to w.
 // If listenAddr is non-empty, an SSE server is started on that address.
 func New(w io.Writer, listenAddr string, logger *zap.Logger) *Writer {
 	wr := &Writer{
-		w:          w,
-		logger:     logger,
-		sseClients: make(map[chan []byte]struct{}),
+		w:   w,
+		sse: newSSEBroadcaster(logger),
 	}
 	if listenAddr != "" {
-		go wr.startSSE(listenAddr)
+		go wr.sse.startSSE(listenAddr)
 	}
 	return wr
 }
@@ -91,7 +128,7 @@ func (w *Writer) Write(_ context.Context, ev *consumer.EnrichedEvent) {
 
 	data, err := json.Marshal(ev)
 	if err != nil {
-		w.logger.Error("json marshal failed", zap.Error(err))
+		w.sse.logger.Error("json marshal failed", zap.Error(err))
 		return
 	}
 	line := append(data, '\n')
@@ -100,7 +137,7 @@ func (w *Writer) Write(_ context.Context, ev *consumer.EnrichedEvent) {
 	_, _ = w.w.Write(line)
 	w.mu.Unlock()
 
-	w.fanoutSSE(data)
+	w.sse.fanout(data)
 }
 
 // ── Grouped session writer ────────────────────────────────────────────────────
@@ -114,11 +151,7 @@ type GroupedWriter struct {
 	w           io.Writer
 	wmu         sync.Mutex // guards writes to w
 	idleTimeout time.Duration
-	logger      *zap.Logger
-
-	// SSE broadcaster (same fan-out as Writer)
-	sseClients map[chan []byte]struct{}
-	sseMu      sync.RWMutex
+	sse         sseBroadcaster
 }
 
 // sessionGroup accumulates events for one AI session.
@@ -144,11 +177,10 @@ func NewGroupedWriter(w io.Writer, idleTimeout time.Duration, listenAddr string,
 		groups:      make(map[string]*sessionGroup),
 		w:           w,
 		idleTimeout: idleTimeout,
-		logger:      logger,
-		sseClients:  make(map[chan []byte]struct{}),
+		sse:         newSSEBroadcaster(logger),
 	}
 	if listenAddr != "" {
-		go gw.startSSE(listenAddr)
+		go gw.sse.startSSE(listenAddr)
 	}
 	return gw
 }
@@ -243,7 +275,7 @@ func (gw *GroupedWriter) emit(g *sessionGroup) {
 	// Serialise with indentation for human readability
 	data, err := json.MarshalIndent(g, "", "  ")
 	if err != nil {
-		gw.logger.Error("grouped marshal failed", zap.Error(err))
+		gw.sse.logger.Error("grouped marshal failed", zap.Error(err))
 		return
 	}
 	data = append(data, '\n')
@@ -254,45 +286,7 @@ func (gw *GroupedWriter) emit(g *sessionGroup) {
 
 	// Fan-out compact (non-indented) version to SSE subscribers
 	compact, _ := json.Marshal(g)
-	gw.fanoutSSE(compact)
-}
-
-// ── Shared SSE infrastructure ─────────────────────────────────────────────────
-
-func (w *Writer) fanoutSSE(data []byte) {
-	w.sseMu.RLock()
-	for ch := range w.sseClients {
-		select {
-		case ch <- data:
-		default:
-		}
-	}
-	w.sseMu.RUnlock()
-}
-
-func (gw *GroupedWriter) fanoutSSE(data []byte) {
-	gw.sseMu.RLock()
-	for ch := range gw.sseClients {
-		select {
-		case ch <- data:
-		default:
-		}
-	}
-	gw.sseMu.RUnlock()
-}
-
-func (w *Writer) startSSE(addr string) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/events", w.handleSSE)
-	mux.HandleFunc("/healthz", healthz)
-	listenAndServe(addr, mux, w.logger)
-}
-
-func (gw *GroupedWriter) startSSE(addr string) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/events", gw.handleSSE)
-	mux.HandleFunc("/healthz", healthz)
-	listenAndServe(addr, mux, gw.logger)
+	gw.sse.fanout(compact)
 }
 
 func healthz(rw http.ResponseWriter, _ *http.Request) {
@@ -315,28 +309,6 @@ func listenAndServe(addr string, mux *http.ServeMux, logger *zap.Logger) {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("SSE server error", zap.Error(err))
 	}
-}
-
-func (w *Writer) handleSSE(rw http.ResponseWriter, r *http.Request) {
-	ch := sseConnect(rw, r, w.logger)
-	defer sseDisconnect(rw, r, ch, &w.sseMu, w.sseClients, w.logger)
-
-	w.sseMu.Lock()
-	w.sseClients[ch] = struct{}{}
-	w.sseMu.Unlock()
-
-	sseStream(rw, r, ch)
-}
-
-func (gw *GroupedWriter) handleSSE(rw http.ResponseWriter, r *http.Request) {
-	ch := sseConnect(rw, r, gw.logger)
-	defer sseDisconnect(rw, r, ch, &gw.sseMu, gw.sseClients, gw.logger)
-
-	gw.sseMu.Lock()
-	gw.sseClients[ch] = struct{}{}
-	gw.sseMu.Unlock()
-
-	sseStream(rw, r, ch)
 }
 
 func sseConnect(rw http.ResponseWriter, r *http.Request, logger *zap.Logger) chan []byte {

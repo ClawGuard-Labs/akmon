@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ai-agent-monitor/internal/constants"
 	"github.com/ai-agent-monitor/internal/consumer"
 	"github.com/ai-agent-monitor/internal/provenance"
 )
@@ -125,7 +126,7 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 			}
 
 			edgeType := EdgeRead
-			if isWriteFlags(ev.FileFlags) {
+			if constants.IsWriteOpen(ev.FileFlags) {
 				edgeType = EdgeWrote
 			}
 			if e, isNew := b.g.ensureEdge(procID, fileID, edgeType, taint.IsTainted, now); isNew {
@@ -185,7 +186,7 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 	if ev.NucleiResult != nil {
 		a := b.newAlert(
 			ev.NucleiResult.Severity,
-			severityToScore(ev.NucleiResult.Severity),
+			constants.SeverityScore(ev.NucleiResult.Severity),
 			fmt.Sprintf("[nuclei] %s", ev.NucleiResult.Name),
 			ev.NucleiResult.Description,
 			[]string{procID},
@@ -205,8 +206,6 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 	}
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
 func (b *Builder) newAlert(severity string, riskScore int, title, detail string, nodeIDs []string, sessionID string, at time.Time) *Alert {
 	id := fmt.Sprintf("alert:%d", atomic.AddUint64(&b.alertID, 1))
 	return &Alert{
@@ -221,25 +220,3 @@ func (b *Builder) newAlert(severity string, riskScore int, title, detail string,
 	}
 }
 
-// severityToScore maps a severity string to a numeric risk score for Nuclei
-// findings that don't carry a numeric score from the detection engine.
-func severityToScore(sev string) int {
-	switch sev {
-	case "critical":
-		return 90
-	case "high":
-		return 70
-	case "medium":
-		return 50
-	case "low":
-		return 30
-	default:
-		return 10
-	}
-}
-
-// isWriteFlags mirrors the logic from provenance/tracker.go.
-// O_WRONLY=0x1, O_RDWR=0x2, O_CREAT=0x40.
-func isWriteFlags(flags uint32) bool {
-	return flags&0x1 != 0 || flags&0x2 != 0 || flags&0x40 != 0
-}

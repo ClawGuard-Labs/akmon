@@ -39,10 +39,10 @@ package provenance
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/ai-agent-monitor/internal/constants"
 	"github.com/ai-agent-monitor/internal/consumer"
 )
 
@@ -57,25 +57,6 @@ const (
 	// to prevent unbounded memory growth. See TODO.md for a configurable flag.
 	taintExpiryDuration = 2 * time.Hour
 )
-
-// knownAIServicePorts lists ports we do NOT consider "external download" even
-// if they are non-localhost. These are local AI service ports that the monitor
-// already handles via Nuclei scanning.
-var knownAIServicePorts = map[uint16]bool{
-	6333: true, 6334: true, 8000: true, 8080: true,
-	11434: true, 8001: true, 7860: true, 8501: true, 3000: true,
-	19530: true, 9200: true,
-}
-
-// modelExtensions are file extensions we consider model artifacts.
-// If a file_open write event is observed for a path with one of these
-// extensions, it is recorded as a model file download.
-var modelExtensions = map[string]bool{
-	".gguf": true, ".safetensors": true, ".pt": true, ".pth": true,
-	".bin": true, ".onnx": true, ".pkl": true, ".h5": true,
-}
-
-// ─── public types ────────────────────────────────────────────────────────────
 
 // TaintInfo is the result of processing a single event through the tracker.
 // It is attached to the event before the detector runs.
@@ -207,7 +188,8 @@ func (t *Tracker) handleNetConnect(ev *consumer.EnrichedEvent) TaintInfo {
 	ip, port := ev.Network.DstIP, ev.Network.DstPort
 
 	// Skip localhost and known AI-service ports — not a suspicious download.
-	if isLocalhost(ip) || knownAIServicePorts[port] {
+	_, knownPort := constants.AIServicePorts[port]
+	if constants.IsLocalhost(ip) || knownPort {
 		return t.existingTaint(ev.Pid)
 	}
 
@@ -224,7 +206,7 @@ func (t *Tracker) handleNetConnect(ev *consumer.EnrichedEvent) TaintInfo {
 
 func (t *Tracker) handleFileOpen(ev *consumer.EnrichedEvent) TaintInfo {
 	// ── Case 1: write-open after pending connect → potential model download ──
-	if isWriteOpen(ev.FileFlags) {
+	if constants.IsWriteOpen(ev.FileFlags) {
 		if pc, ok := t.pendingConnects[ev.Pid]; ok {
 			if ev.Timestamp.Sub(pc.At) <= downloadCorrelationWindow && hasModelExt(ev.FilePath) {
 				// Confirm: this file is being written after an external connection.
@@ -257,7 +239,7 @@ func (t *Tracker) handleFileOpen(ev *consumer.EnrichedEvent) TaintInfo {
 	}
 
 	// ── Case 2: read-open of a tainted file → taint the opener ──────────────
-	if rec, ok := t.files[ev.FilePath]; ok && !isWriteOpen(ev.FileFlags) {
+	if rec, ok := t.files[ev.FilePath]; ok && !constants.IsWriteOpen(ev.FileFlags) {
 		rec.OpenedBy = append(rec.OpenedBy, FileAccess{
 			PID: ev.Pid, Comm: ev.Comm,
 			SessionID: ev.AISessionID, At: ev.Timestamp,
@@ -346,22 +328,7 @@ func (t *Tracker) expirePendingConnects() {
 	}
 }
 
-// isWriteOpen returns true if the openat flags indicate write or create mode.
-// O_WRONLY=1, O_RDWR=2, O_CREAT=0x40 (64).
-func isWriteOpen(flags uint32) bool {
-	return flags&0x1 != 0 || flags&0x2 != 0 || flags&0x40 != 0
-}
-
-// hasModelExt returns true if path has a known model file extension.
 func hasModelExt(path string) bool {
-	idx := strings.LastIndex(path, ".")
-	if idx < 0 {
-		return false
-	}
-	return modelExtensions[strings.ToLower(path[idx:])]
-}
-
-// isLocalhost returns true for loopback addresses.
-func isLocalhost(ip string) bool {
-	return ip == "127.0.0.1" || ip == "::1" || strings.HasPrefix(ip, "127.")
+	_, ok := constants.ModelExtensions[constants.FileExt(path)]
+	return ok
 }

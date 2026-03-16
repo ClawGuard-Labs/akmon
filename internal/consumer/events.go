@@ -21,8 +21,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ai-agent-monitor/internal/constants"
 )
 
 // ── Event-type constants (must match common.h) ────────────────────────────
@@ -44,22 +48,6 @@ const (
 	RFlagLargeMmap uint32 = 1 << 1
 	RFlagHTTP      uint32 = 1 << 2
 )
-
-// ── Model file extensions — classification done in Go (not eBPF) ─────────
-var modelExtensions = map[string]struct{}{
-	".pt": {}, ".pth": {}, ".bin": {}, ".gguf": {}, ".safetensors": {},
-	".onnx": {}, ".pkl": {}, ".npz": {}, ".npy": {}, ".h5": {},
-	".pb": {}, ".ckpt": {}, ".weights": {}, ".model": {}, ".tflite": {},
-}
-
-// ── Known AI process names ────────────────────────────────────────────────
-var aiProcessNames = map[string]struct{}{
-	"python": {}, "python3": {}, "python3.10": {}, "python3.11": {}, "python3.12": {},
-	"ollama": {}, "llama": {}, "llama-server": {}, "llama.cpp": {},
-	"torchrun": {}, "accelerate": {}, "vllm": {}, "tritonserver": {},
-	"node": {}, "nodejs": {}, "deno": {},
-	"cargo": {}, "rust-ai": {},
-}
 
 // ══════════════════════════════════════════════════════════════════════════
 //  RAW BPF STRUCTS (mirrors of C structs for binary decoding)
@@ -214,10 +202,6 @@ type EnrichedEvent struct {
 	NucleiResult *NucleiResult `json:"nuclei_result,omitempty"`
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-//  DECODER — raw bytes from ring buffer → EnrichedEvent
-// ══════════════════════════════════════════════════════════════════════════
-
 // Decode turns raw ring-buffer bytes into an EnrichedEvent.
 // It peeks at the event_type field (offset 32 in MonHdr) to determine
 // which struct to decode into.
@@ -273,7 +257,7 @@ func decodeExec(raw []byte) (*EnrichedEvent, error) {
 		Cmdline:   strings.Join(args, " "),
 		Tags:      []string{},
 	}
-	if _, ok := aiProcessNames[comm]; ok {
+	if _, ok := constants.AIProcessNames[comm]; ok {
 		out.IsAIProcess = true
 	}
 	return out, nil
@@ -302,10 +286,7 @@ func decodeFile(raw []byte, eventType uint8) (*EnrichedEvent, error) {
 		RiskFlags: ev.RiskFlags,
 		Tags:      []string{},
 	}
-
-	// Model file detection — extension check done here in Go
 	out.ModelDetected = detectModelFile(filePath)
-
 	return out, nil
 }
 
@@ -400,31 +381,48 @@ func cStr(b []byte) string {
 	return string(b[:n])
 }
 
-// nsToTime converts a kernel nanosecond timestamp (bpf_ktime_get_ns) to
-// a wall-clock time. bpf_ktime_get_ns returns time since boot, so we
-// compute wall time as: boot_time + ktime_offset.
-// For simplicity in this prototype, we use the current wall time when
-// the event is decoded. For precise correlation, inject boot time offset.
-func nsToTime(_ uint64) time.Time {
-	return time.Now().UTC()
+// bootTime is the wall-clock time at system boot, computed once at package
+// init by reading /proc/uptime. Zero value means the read failed and
+// nsToTime will fall back to time.Now().
+//
+// Formula: bootTime = time.Now() − uptime
+// Then:    wallTime = bootTime + Duration(kernelNs)
+var bootTime = func() time.Time {
+	data, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return time.Time{}
+	}
+	// /proc/uptime: "<uptime_seconds> <idle_seconds>"
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return time.Time{}
+	}
+	uptimeSec, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return time.Time{}
+	}
+	return time.Now().Add(-time.Duration(uptimeSec * float64(time.Second))).UTC()
+}()
+
+// nsToTime converts a bpf_ktime_get_ns() nanosecond timestamp (CLOCK_MONOTONIC,
+// nanoseconds since boot) to a wall-clock UTC time.
+// Falls back to time.Now() if /proc/uptime was unreadable at startup.
+func nsToTime(ns uint64) time.Time {
+	if bootTime.IsZero() {
+		return time.Now().UTC()
+	}
+	return bootTime.Add(time.Duration(ns)).UTC()
 }
 
 // detectModelFile checks whether the file path has a model file extension.
-// Returns the filename if it's a model file, empty string otherwise.
+// Returns the filename (basename) if it's a model file, empty string otherwise.
 func detectModelFile(path string) string {
 	if path == "" {
 		return ""
 	}
-	// Find the last '.' after the last '/'
-	lastSlash := strings.LastIndex(path, "/")
-	base := path[lastSlash+1:]
-	lastDot := strings.LastIndex(base, ".")
-	if lastDot < 0 {
-		return ""
-	}
-	ext := strings.ToLower(base[lastDot:])
-	if _, ok := modelExtensions[ext]; ok {
-		return base
+	if _, ok := constants.ModelExtensions[constants.FileExt(path)]; ok {
+		lastSlash := strings.LastIndex(path, "/")
+		return path[lastSlash+1:]
 	}
 	return ""
 }

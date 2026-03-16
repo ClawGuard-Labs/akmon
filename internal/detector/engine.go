@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ai-agent-monitor/internal/constants"
 	"github.com/ai-agent-monitor/internal/consumer"
 	"github.com/ai-agent-monitor/internal/correlator"
 	tmpl "github.com/ai-agent-monitor/internal/templates"
@@ -120,7 +121,7 @@ func evalFilepathMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent) bool {
 
 	if len(m.Extensions) > 0 {
 		hasCheck = true
-		if !matchAnyExact(fileExt(path), m.Extensions) {
+		if !matchAnyExact(constants.FileExt(path), m.Extensions) {
 			return false
 		}
 	}
@@ -178,13 +179,13 @@ func evalNetworkMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent) bool {
 	case "http_method":
 		return matchAnyExact(
 			strings.ToUpper(net.HTTPMethod),
-			upperAll(m.Values),
+			mapStrings(m.Values, strings.ToUpper),
 		)
 
 	case "protocol":
 		return matchAnyExact(
 			strings.ToLower(net.Protocol),
-			lowerAll(m.Values),
+			mapStrings(m.Values, strings.ToLower),
 		)
 	}
 	return false
@@ -268,7 +269,7 @@ func evalSessionMatcher(m *tmpl.Matcher, ev *consumer.EnrichedEvent, sess *corre
 
 	case "has_exec_comm":
 		// True if any exec event in session history has comm in m.Values.
-		lv := lowerAll(m.Values)
+		lv := mapStrings(m.Values, strings.ToLower)
 		for _, sev := range sess.Events {
 			if sev.EventType == "exec" {
 				if matchAnyExact(strings.ToLower(sev.Comm), lv) {
@@ -431,17 +432,6 @@ func riskFlagBit(name string) uint32 {
 	return 0
 }
 
-// fileExt returns the lowercased extension of a file path (e.g. ".pt").
-func fileExt(path string) string {
-	lastSlash := strings.LastIndex(path, "/")
-	base := path[lastSlash+1:]
-	lastDot := strings.LastIndex(base, ".")
-	if lastDot < 0 {
-		return ""
-	}
-	return strings.ToLower(base[lastDot:])
-}
-
 // sessionHasAIProcess reports whether any event in the session is AI-related.
 // Must be called with the session read lock held.
 func sessionHasAIProcess(sess *correlator.Session) bool {
@@ -453,20 +443,11 @@ func sessionHasAIProcess(sess *correlator.Session) bool {
 	return false
 }
 
-// lowerAll returns vals with each element lowercased.
-func lowerAll(vals []string) []string {
+// mapStrings applies fn to every element of vals and returns the results.
+func mapStrings(vals []string, fn func(string) string) []string {
 	out := make([]string, len(vals))
 	for i, v := range vals {
-		out[i] = strings.ToLower(v)
-	}
-	return out
-}
-
-// upperAll returns vals with each element uppercased.
-func upperAll(vals []string) []string {
-	out := make([]string, len(vals))
-	for i, v := range vals {
-		out[i] = strings.ToUpper(v)
+		out[i] = fn(v)
 	}
 	return out
 }
