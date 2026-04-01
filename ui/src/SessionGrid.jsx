@@ -1,12 +1,18 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useCallback } from 'react'
 
 // ── Session builder ───────────────────────────────────────────────────────────
 // Groups flat node/alert maps into per-session summary objects.
 
-function buildSessions(nodes, alerts) {
+function pickRootProcess(processes) {
+  if (!processes.length) return null
+  const sessionPids = new Set(processes.map(p => p.meta?.pid))
+  return processes.find(p => !sessionPids.has(p.meta?.ppid)) ?? processes[0]
+}
+
+export function buildSessions(nodes, alerts) {
   const map = {}
 
-  for (const node of Object.values(nodes)) {
+  for (const node of Object.values(nodes)) {  
     const sid = node.session_id
     if (!sid) continue
 
@@ -49,9 +55,7 @@ function buildSessions(nodes, alerts) {
 
   return Object.values(map)
     .map(s => {
-      // Root process = the one whose ppid is not a pid within the same session
-      const sessionPids = new Set(s.processes.map(p => p.meta?.pid))
-      s.rootProc = s.processes.find(p => !sessionPids.has(p.meta?.ppid)) ?? s.processes[0]
+      s.rootProc = pickRootProcess(s.processes)
       delete s._tagSet
       return s
     })
@@ -205,12 +209,7 @@ const SessionCard = React.memo(function SessionCard({ session, isHighlighted, on
 
 // ── SessionGrid ───────────────────────────────────────────────────────────────
 
-export const SessionGrid = React.memo(function SessionGrid({ nodes, alerts, highlightedSessionId, onSessionSelect }) {
-  const sessions = useMemo(
-    () => buildSessions(nodes, alerts),
-    [nodes, alerts]
-  )
-
+export const SessionGrid = React.memo(function SessionGrid({ sessions, highlightedSessionId, onSessionSelect }) {
   return (
     <div className="session-grid-area">
       <div className="session-grid-toolbar">

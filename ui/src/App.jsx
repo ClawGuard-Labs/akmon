@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import './App.css'
 import { useGraphSSE }   from './useGraphSSE'
 import { AlertPanel }    from './AlertPanel'
-import { SessionGrid }   from './SessionGrid'
+import { SessionGrid, buildSessions } from './SessionGrid'
 import { GraphView }     from './GraphView'
 import { Inspector }     from './Inspector'
 
@@ -89,6 +89,15 @@ export default function App() {
   // Session ID to highlight (when an alert is selected but we're still in grid)
   const highlightedSessionId = selectedAlert?.session_id ?? null
 
+  const sessions = useMemo(
+    () => buildSessions(nodes, alerts),
+    [nodes, alerts]
+  )
+  const inspectorRootProc = useMemo(() => {
+    if (!selectedNode?.session_id) return null
+    return sessions.find(s => s.id === selectedNode.session_id)?.rootProc ?? null
+  }, [sessions, selectedNode])
+
   return (
     <div className="app">
       <div className="topbar">
@@ -128,10 +137,8 @@ export default function App() {
             sessionLabel={selectedSession}
           />
         ) : (
-          // ── Grid view: PPT-style session cards ────────────────────────────
           <SessionGrid
-            nodes={nodes}
-            alerts={alerts}
+            sessions={sessions}
             highlightedSessionId={highlightedSessionId}
             onSessionSelect={handleSessionSelect}
           />
@@ -140,6 +147,7 @@ export default function App() {
         <Inspector
           node={selectedNode}
           alert={selectedAlert}
+          rootProc={inspectorRootProc}
         />
       </div>
     </div>
