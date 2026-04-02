@@ -6,6 +6,7 @@
 //	GET  /api/graph/events  — SSE stream of GraphDiff updates
 //	GET  /api/alerts        — all alerts so far (JSON)
 //	GET  /api/chains        — aggregated chain data (JSON, requires --compact)
+//	GET  /api/services      — detected AI processes and services (JSON)
 //	GET  /*                 — React SPA (embedded static files)
 //
 // The static/ subdirectory is populated by `make ui` (Vite build).
@@ -48,6 +49,7 @@ func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger)
 	mux.HandleFunc("/api/graph", s.handleSnapshot)
 	mux.HandleFunc("/api/alerts", s.handleAlerts)
 	mux.HandleFunc("/api/chains", s.handleChains)
+	mux.HandleFunc("/api/services", s.handleServices)
 
 	// Serve the embedded React SPA for all other paths.
 	// Fall back to index.html for client-side routing (SPA 404 → index.html).

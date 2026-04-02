@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import './App.css'
 import { useGraphSSE }   from './useGraphSSE'
 import { AlertPanel }    from './AlertPanel'
+import { AIServicesBar }  from './AIServicesBar'
 import { SessionGrid, buildSessions } from './SessionGrid'
 import { GraphView }     from './GraphView'
 import { Inspector }     from './Inspector'
@@ -118,6 +119,8 @@ export default function App() {
             : status}
         </span>
       </div>
+
+      <AIServicesBar />
 
       <div className="main-area">
         <AlertPanel

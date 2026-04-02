@@ -16,6 +16,90 @@
 
 .main-area { display: flex; flex: 1; overflow: hidden; }
 
+/* ── AI Services Bar ───────────────────────────────────────────────────── */
+
+.ai-services-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 1rem; min-height: 36px; flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  overflow-x: auto; overflow-y: hidden;
+}
+.ai-services-bar::-webkit-scrollbar { height: 3px; }
+
+.asb-label {
+  font-size: .65rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-dim); white-space: nowrap; flex-shrink: 0;
+}
+.asb-empty {
+  font-size: .68rem; color: var(--text-dim); font-style: italic;
+  white-space: nowrap;
+}
+
+.asb-items {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  flex-wrap: wrap;
+}
+
+.asb-section {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+
+.asb-section-label {
+  font-size: .58rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-dim); white-space: nowrap; flex-shrink: 0;
+  opacity: .85;
+}
+
+.asb-kind-badge {
+  font-size: .5rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; padding: 1px 4px; border-radius: 2px;
+  background: rgba(88,166,255,.12); color: var(--blue);
+  border: 1px solid rgba(88,166,255,.25); flex-shrink: 0;
+}
+.asb-kind-badge-service {
+  background: rgba(63,185,80,.12); color: var(--green);
+  border-color: rgba(63,185,80,.25);
+}
+
+.asb-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(88,166,255,.06);
+  border: 1px solid rgba(88,166,255,.15);
+  white-space: nowrap; flex-shrink: 0;
+}
+.asb-chip-tainted {
+  background: rgba(224,82,82,.08);
+  border-color: rgba(224,82,82,.25);
+}
+.asb-chip-service {
+  background: rgba(63,185,80,.06);
+  border-color: rgba(63,185,80,.15);
+}
+
+.asb-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.asb-name {
+  font-size: .7rem; font-weight: 600; color: var(--text);
+}
+.asb-cat-badge {
+  font-size: .55rem; text-transform: uppercase; font-weight: 600;
+  letter-spacing: .04em; padding: 0 4px; border-radius: 2px;
+  border: 1px solid; opacity: .8;
+}
+.asb-port {
+  font-size: .6rem; color: var(--text-dim);
+}
+.asb-status {
+  font-size: .5rem; line-height: 1;
+}
+.asb-status-running  { color: var(--green); }
+.asb-status-listening { color: var(--green); }
+.asb-divider {
+  width: 1px; height: 18px; background: var(--border); flex-shrink: 0;
+}
+
 /* ── Left panel: Alerts ─────────────────────────────────────────────────── */
 
 .alert-panel {

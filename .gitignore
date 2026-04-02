@@ -7,6 +7,8 @@ bpf/vmlinux.h
 *_rules.json
 *.log
 
+docs/*.aux
+
 tests/logs/
 
 .DS_Store
