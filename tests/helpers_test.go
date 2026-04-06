@@ -13,7 +13,8 @@ import (
 	"github.com/clawsec/internal/templates"
 )
 
-const templatesDir = "../templates"
+// Sibling of the clawsec repo: ../clawsec-templates from repo root; tests/ is one level deeper.
+const templatesDir = "../../clawsec-templates/behavioral-templates"
 
 var (
 	allTemplates []templates.Template

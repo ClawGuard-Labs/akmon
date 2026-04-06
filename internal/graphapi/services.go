@@ -132,7 +132,7 @@ func readCmdline(pidStr string) string {
 	if err != nil || len(data) == 0 {
 		return ""
 	}
-	// cmdline is null-separated; convert to spaces and truncate
+	// cmdline is null-separated; convert to spaces and truncate 
 	s := strings.ReplaceAll(string(data), "\x00", " ")
 	s = strings.TrimSpace(s)
 	if len(s) > 200 {

@@ -5,7 +5,7 @@
 #   2. bpf         : compile monitor.bpf.c → monitor.bpf.o (eBPF bytecode)
 #   3. ui          : build React dashboard (Vite) → internal/graphapi/static/
 #   4. build       : compile Go daemon binary (embeds the built UI)
-#   5. install     : install binary, BPF object, templates + systemd unit
+#   5. install     : install binary, BPF object, templates from clawsec-templates + systemd unit
 #
 # Targets:
 #   make deps          — check all build/runtime dependencies
@@ -18,6 +18,7 @@
 #   make run           — build and run as root (requires root)
 #   make fmt           — format Go and C source files
 #   make install       — install as systemd service (then: sudo make enable)
+#                      — set TEMPLATES_SRC=../clawsec-templates (default) to find YAML bundles
 #   make uninstall     — stop, disable and remove all installed files
 #   make enable        — systemctl enable --now clawsec
 #   make disable       — systemctl disable --now clawsec
@@ -159,22 +160,34 @@ SVC_LOG      := /var/log/$(SVC_NAME)
 SVC_UNIT     := /etc/systemd/system/$(SVC_NAME).service
 SVC_ROTATE   := /etc/logrotate.d/$(SVC_NAME)
 
+# Checkout of https://github.com/ClawGuard-Labs/clawsec-templates
+TEMPLATES_SRC ?= ../clawsec-templates
+
 # ── Install ───────────────────────────────────────────────────────────────────
-# Installs binary, BPF object, templates, systemd unit, and logrotate config.
+# Installs binary, BPF object, YAML templates from TEMPLATES_SRC, systemd unit, logrotate.
+# Requires: $(TEMPLATES_SRC)/behavioral-templates and $(TEMPLATES_SRC)/nuclei-templates
 # After install: sudo systemctl enable --now clawsec
 .PHONY: install
 install: build
+	@test -d "$(TEMPLATES_SRC)/behavioral-templates" || ( \
+		echo "ERROR: $(TEMPLATES_SRC)/behavioral-templates not found."; \
+		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		exit 1)
+	@test -d "$(TEMPLATES_SRC)/nuclei-templates" || ( \
+		echo "ERROR: $(TEMPLATES_SRC)/nuclei-templates not found."; \
+		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		exit 1)
 	@echo "==> Creating directories..."
 	sudo install -d -m 0755 $(SVC_LIB)
-	sudo install -d -m 0755 $(SVC_ETC)/templates
+	sudo install -d -m 0755 $(SVC_ETC)/behavioral-templates
 	sudo install -d -m 0755 $(SVC_ETC)/nuclei-templates
 	sudo install -d -m 0750 $(SVC_LOG)
 	@echo "==> Installing binary and BPF object..."
 	sudo install -m 0755 $(BINARY)   $(SVC_BINARY)
 	sudo install -m 0644 bin/monitor.bpf.o $(SVC_LIB)/monitor.bpf.o
-	@echo "==> Installing templates..."
-	sudo cp -r templates/*        $(SVC_ETC)/templates/
-	sudo cp -r nuclei-templates/* $(SVC_ETC)/nuclei-templates/
+	@echo "==> Installing templates from $(TEMPLATES_SRC)..."
+	sudo cp -r "$(TEMPLATES_SRC)"/behavioral-templates/* $(SVC_ETC)/behavioral-templates/
+	sudo cp -r "$(TEMPLATES_SRC)"/nuclei-templates/* $(SVC_ETC)/nuclei-templates/
 	@echo "==> Installing systemd unit..."
 	sudo install -m 0644 scripts/$(SVC_NAME).service $(SVC_UNIT)
 	@echo "==> Installing logrotate config..."
@@ -261,7 +274,7 @@ help:
 	@echo "  build-no-ui   Full build skipping React rebuild (faster iteration)"
 	@echo "  verify        Dry-run verify eBPF program with bpftool"
 	@echo "  run           Build and run as root"
-	@echo "  install       Install binary, BPF, templates, systemd unit + logrotate"
+	@echo "  install       Install binary, BPF, YAML from TEMPLATES_SRC (../clawsec-templates), systemd + logrotate"
 	@echo "  uninstall     Stop, disable, and remove all installed files"
 	@echo "  enable        systemctl enable --now clawsec"
 	@echo "  disable       systemctl disable --now clawsec"

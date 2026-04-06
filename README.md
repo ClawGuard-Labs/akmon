@@ -14,7 +14,7 @@ Combines two complementary detection engines:
 - **Nuclei v3 integration** — Active scanning of local AI services (Qdrant, ChromaDB, Ollama, vLLM, etc.) when connections are observed
 - **Session correlation** — Process tree and session IDs for grouping events
 - **Output** — NDJSON, grouped JSON, or live SSE stream
-- **Detection templates** — Ready-made rules under `templates/` and `nuclei-templates/`
+- **Detection templates** — Shipped in **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** (`behavioral-templates/`, `nuclei-templates/`)
 - **React dashboard** (optional) — Graph view and alert panel served by the monitor
 
 ---
@@ -23,7 +23,7 @@ Combines two complementary detection engines:
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  Kernel (eBPF tracepoints — stable ABI, CO-RE, kernel ≥ 5.15) │
+│  Kernel (eBPF tracepoints — stable ABI, CO-RE, kernel ≥ 5.15)  │
 │  execve │ openat │ read/write │ unlinkat │ mmap │ connect │ …  │
 └─────────────────────────┬──────────────────────────────────────┘
                           │  ring buffer (8 MB)
@@ -31,12 +31,12 @@ Combines two complementary detection engines:
 │  consumer   → decode raw bytes      → EnrichedEvent            │
 │  correlator → assign session ID     → process tree + timing    │
 │  detector   → YAML template rules   → tags + risk score        │
-│      │                                                          │
-│      └─ net_connect to localhost AI port?                       │
-│              │                                                  │
-│              ▼  (async goroutine)                               │
-│         Nuclei engine → scan target → nuclei_finding event      │
-│                                                                  │
+│      │                                                         │
+│      └─ net_connect to localhost AI port?                      │
+│              │                                                 │
+│              ▼  (async goroutine)                              │
+│         Nuclei engine → scan target → nuclei_finding event     │
+│                                                                │
 │  output → NDJSON / grouped JSON → stdout / file / SSE          │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -67,24 +67,42 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 
 ## Quick Start
 
+YAML detection rules are **not** in this repository. Clone **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** next to `clawsec` (or anywhere you prefer).
+
 ```bash
-# Clone and build
 git clone https://github.com/ClawGuard-Labs/clawsec
+git clone https://github.com/ClawGuard-Labs/clawsec-templates
 cd clawsec
 make build
+```
 
-# Run (requires root)
+**Option A — defaults** — from the `clawsec` repo directory, defaults expect **`./clawsec-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `clawsec` (nested), or symlink:
+
+```bash
+git clone https://github.com/ClawGuard-Labs/clawsec-templates.git clawsec-templates
+ln -sfn clawsec-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
 sudo ./bin/monitor
+```
 
-# With all options
+If **clawsec-templates** sits **next to** `clawsec` (sibling), pass paths explicitly:
+
+```bash
 sudo ./bin/monitor \
-  --templates       ./templates \
-  --nuclei-templates ./nuclei-templates \
+  --behavioral-templates ../clawsec-templates/behavioral-templates \
+  --nuclei-templates ../clawsec-templates/nuclei-templates
+```
+
+**More flags:**
+
+```bash
+sudo ./bin/monitor \
   --output          events.json \
   --log-level       info \
   --grouped \
   --group-timeout   500ms
 ```
+
+See [Template bundles (clawsec-templates)](#template-bundles-clawsec-templates) for installs, authoring, and tests.
 
 ---
 
@@ -106,7 +124,7 @@ make clean          # Remove bin/
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/clawsec/` |
-| `--templates <dir>` | `./templates` | Directory containing behavioral YAML detection templates |
+| `--behavioral-templates <dir>` | `./clawsec-templates/behavioral-templates` | Directory containing behavioral YAML rules |
 | `--nuclei-templates <dir>` | `./nuclei-templates` | Directory containing Nuclei YAML templates for active scanning |
 | `--no-nuclei` | false | Disable active Nuclei scanning |
 | `--output <file>` | stdout | JSON output file (appended) |
@@ -121,105 +139,17 @@ make clean          # Remove bin/
 
 ## Detection Templates
 
-### Behavioral Templates (`templates/`)
+Rules are maintained in **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/clawsec-templates/blob/main/AUTHORING.md).
+
 
 YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
 
-```
-templates/
-├── file/
-│   ├── model-load.yaml          # AI model file extensions (.pt, .gguf, .safetensors …)
-│   ├── large-mmap.yaml          # Memory-mapped files >100 MB (model load via mmap)
-│   ├── sensitive-path.yaml      # /etc, /proc, /sys access
-│   ├── ssh-key-access.yaml      # SSH private key / authorized_keys access
-│   ├── self-modify.yaml         # Process writes to its own binary
-│   ├── config-access.yaml       # .json, .yaml, .env, .toml file access
-│   └── file-deleted.yaml        # File deletion (unlink)
-├── network/
-│   ├── outbound-http.yaml       # Connections to port 80/443
-│   ├── http-post.yaml           # HTTP POST requests
-│   └── unusual-port.yaml        # Connections to non-standard ports
-├── process/
-│   ├── ai-process.yaml          # Known AI runtimes (python, ollama, vllm …)
-│   └── shell-spawned-by-ai.yaml # Shell (bash/sh/zsh) spawned in AI session
-└── session/
-    ├── download-exec-chain.yaml  # exec within 30s of net_connect
-    ├── curl-bash-chain.yaml      # curl/wget → shell pattern (RCE risk)
-    ├── long-running-llm.yaml     # AI process active >5 minutes
-    └── read-write-inference-loop.yaml  # Read one file, write another (inference pipeline)
-```
 
-#### Template Schema
 
-```yaml
-id: ssh_key_access                # Used as event tag and session tag
 
-info:
-  name: SSH Key Access
-  author: sl4y3r
-  severity: high                  # info | low | medium | high | critical
-  description: "..."
-  tags: [ai, credentials, ssh]
-  risk-score: 50                  # Added to event.risk_score when rule fires
 
-matchers:
-  - type: event-type              # Match on EventType string
-    values: [file_open, file_rw]
 
-  - type: filepath                # Match on FilePath
-    words: [/.ssh/, /id_rsa, /id_ed25519, /authorized_keys]
-    condition: or                 # any word matches → matcher passes
 
-matchers-condition: and           # ALL matchers must pass (default: "and")
-```
-
-#### Matcher Types
-
-| Type | Fields | Matches Against |
-|------|--------|----------------|
-| `event-type` | `values` | `ev.EventType` |
-| `process` | `field` (comm/binary/cmdline/is_ai_process), `values`, `words`, `regex` | Process info |
-| `filepath` | `words`, `extensions`, `values`, `regex` | `ev.FilePath` |
-| `network` | `field` (dst_port/dst_ip/http_method/protocol), `values`, `lt`, `gt` | `ev.Network` |
-| `risk-flag` | `flags` (sensitive/large_mmap/http) | `ev.RiskFlags` bitmask |
-| `session` | `field` (exec_after_net/has_ai_process/duration_minutes/…), `equals`, `lt`, `gt` | Session state |
-| `tls-payload` | `words`, `regex` | `ev.TLSPayload` |
-
-Add `negate: true` to any matcher to invert its result.
-
-#### Adding a custom behavioral rule
-
-Create a new `.yaml` file anywhere under `templates/` and restart the monitor:
-
-```yaml
-id: my_custom_rule
-info:
-  name: My Custom Rule
-  severity: high
-  risk-score: 60
-matchers:
-  - type: event-type
-    values: [exec]
-  - type: process
-    field: cmdline
-    words: [suspicious-binary]
-matchers-condition: and
-```
-
-### Nuclei Templates (`nuclei-templates/`)
-
-Standard Nuclei v3 HTTP templates. These run as active scans against detected local AI services.
-
-```
-nuclei-templates/ai-services/
-├── qdrant-unauth.yaml        # Qdrant vector DB unauthenticated /collections
-├── chromadb-unauth.yaml      # ChromaDB unauthenticated /api/v1/collections
-├── ollama-api-exposed.yaml   # Ollama /api/tags exposed
-├── weaviate-unauth.yaml      # Weaviate /v1/schema exposed
-├── vllm-api-exposed.yaml     # vLLM /v1/models exposed
-├── gradio-exposed.yaml       # Gradio ML app publicly accessible
-└── localai-exposed.yaml      # LocalAI /v1/models exposed
-```
 
 #### How Nuclei scanning is triggered
 
@@ -354,7 +284,7 @@ cat nuclei_test.json | jq 'select(.event_type == "nuclei_finding")'
 ```bash
 # Check behavioral templates load (seen in startup logs)
 sudo ./bin/monitor --log-level info 2>&1 | grep "templates loaded"
-# Expected: INFO  detection templates loaded  {"count": 16, "dir": "./templates"}
+# Expected: INFO  detection templates loaded  {"count": N, "dir": "./clawsec-templates/behavioral-templates"}
 
 # Check Nuclei engine starts
 sudo ./bin/monitor --log-level info 2>&1 | grep "nuclei"
@@ -366,13 +296,43 @@ sudo ./bin/monitor --log-level info 2>&1 | grep "nuclei"
 
 ```bash
 sudo ./bin/monitor \
-  --templates        ./templates \
+  --behavioral-templates ./clawsec-templates/behavioral-templates \
   --nuclei-templates ./nuclei-templates \
   --output           events.json \
   --log-level        debug \
   --grouped \
   --group-timeout    500ms
 ```
+
+---
+
+## Template bundles (clawsec-templates)
+
+| Repository | Role |
+|------------|------|
+| **[clawsec](https://github.com/ClawGuard-Labs/clawsec)** (this repo) | eBPF monitor, Go engine, UI |
+| **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
+
+**Local development**
+
+- Clone or symlink so **`./clawsec-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
+
+**`make install`**
+
+- Install copies YAML from **`TEMPLATES_SRC`** (default: `../clawsec-templates` relative to the `clawsec` tree):
+
+  ```bash
+  sudo make install
+  # or:
+  sudo make install TEMPLATES_SRC=/opt/src/clawsec-templates
+  ```
+
+- Behavioral rules go to **`/etc/clawsec/behavioral-templates/`**; Nuclei rules to **`/etc/clawsec/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
+
+**Tests**
+
+- `go test ./...` from `tests/` loads behavioral YAML from **`../../clawsec-templates/behavioral-templates`** (sibling of the `clawsec` repo). Adjust `tests/helpers_test.go` if your layout differs.
+
 ---
 
 ## Running as a Background Service (systemd)
@@ -385,7 +345,7 @@ The monitor ships with a systemd unit file. Use `make install` to install everyt
 # Full build (eBPF + React UI + Go binary)
 make build
 
-# Install binary, BPF object, templates, and systemd unit
+# Install binary, BPF object, templates (from TEMPLATES_SRC), and systemd unit
 sudo make install
 ```
 
@@ -395,8 +355,8 @@ sudo make install
 |------|----------|
 | `/usr/local/bin/clawsec` | Binary |
 | `/usr/lib/clawsec/monitor.bpf.o` | eBPF object |
-| `/etc/clawsec/templates/` | Behavioral detection rules |
-| `/etc/clawsec/nuclei-templates/` | Nuclei active scan templates |
+| `/etc/clawsec/behavioral-templates/` | Behavioral detection rules (from `clawsec-templates`) |
+| `/etc/clawsec/nuclei-templates/` | Nuclei active scan templates (from `clawsec-templates`) |
 | `/etc/systemd/system/clawsec.service` | systemd unit |
 | `/etc/logrotate.d/clawsec` | Log rotation config |
 
@@ -493,18 +453,13 @@ clawsec/
 │   │   └── output.go          # Flat NDJSON + grouped JSON + SSE
 │   └── templates/
 │       ├── schema.go           # YAML template schema (Template, Matcher structs)
-│       └── loader.go           # Walk templates/ dir, parse + compile regex
-├── templates/                  # Behavioral detection rules (our YAML engine)
-│   ├── file/
-│   ├── network/
-│   ├── process/
-│   └── session/
-├── nuclei-templates/           # Active scanning rules (Nuclei v3 HTTP format)
-│   └── ai-services/
+│       └── loader.go           # Walk behavioral-templates dir, parse + compile regex
 ├── go.mod
 ├── go.sum
 └── Makefile
 ```
+
+Behavioral and Nuclei YAML live in the separate **[clawsec-templates](https://github.com/ClawGuard-Labs/clawsec-templates)** repository.
 
 ### Preview
 

@@ -1,7 +1,7 @@
 // detector.go — YAML-template-driven risk scorer.
 //
 // Rules are no longer hardcoded Go closures. Instead, each rule is a YAML
-// file under the templates/ directory. The Detector loads all templates at
+// file under the clawsec-templates directory. The Detector loads all templates at
 // startup via the templates package, then evaluates them against each event
 // using engine.Evaluate().
 //

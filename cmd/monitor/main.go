@@ -26,7 +26,7 @@
 //
 // Flags:
 //   --bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
-//   --templates   path to YAML templates dir (default: ./templates)
+//   --behavioral-templates  path to behavioral YAML dir (default: ./clawsec-templates/behavioral-templates)
 //   --output      JSON output file        (default: stdout)
 //   --sse         SSE listen address      (default: disabled)
 //   --ui          graph dashboard address (default: disabled)
@@ -67,7 +67,7 @@ var Version = "dev"
 // config holds all runtime configuration parsed from flags.
 type config struct {
 	bpfObjPath      string
-	templatesDir    string
+	behavioralTemplatesDir string
 	nucleiTemplates string
 	noNuclei        bool
 	outputFile      string
@@ -88,8 +88,8 @@ func main() {
 
 	flag.StringVar(&cfg.bpfObjPath, "bpf-obj", "",
 		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/clawsec/)")
-	flag.StringVar(&cfg.templatesDir, "templates", "./templates",
-		"Directory containing YAML detection templates")
+	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./clawsec-templates/behavioral-templates",
+		"Directory containing behavioral YAML detection rules")
 	flag.StringVar(&cfg.nucleiTemplates, "nuclei-templates", "./nuclei-templates",
 		"Directory containing Nuclei YAML templates for active scanning")
 	flag.BoolVar(&cfg.noNuclei, "no-nuclei", false,
@@ -213,11 +213,11 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	corr := correlator.New(ctx, logger)
 
 	// ── 8. Detection rules ────────────────────────────────────────────────
-	det, err := detector.New(logger, cfg.templatesDir)
+	det, err := detector.New(logger, cfg.behavioralTemplatesDir)
 	if err != nil {
 		return fmt.Errorf("loading detection templates: %w\n"+
-			"  Build templates with: make templates\n"+
-			"  Or specify: --templates /path/to/templates", err)
+			"  Clone clawsec-templates alongside this binary (./clawsec-templates/behavioral-templates)\n"+
+			"  or pass: --behavioral-templates /path/to/behavioral-templates", err)
 	}
 
 	// ── 9. Output writer ──────────────────────────────────────────────────
@@ -314,7 +314,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 				nucleiScanner.SetRulesWriter(rulesOut)
 			}
 			logger.Info("nuclei active scanner enabled",
-				zap.String("templates", cfg.nucleiTemplates),
+				zap.String("nuclei_templates", cfg.nucleiTemplates),
 				zap.String("trigger", "net_connect to localhost AI service ports + periodic discovery"),
 			)
 		}
@@ -443,7 +443,7 @@ func findBPFObject(flagPath string) (string, error) {
 //
 //   - the monitor binary itself (resolved via os.Executable)
 //   - the compiled BPF object (bpfPath)
-//   - every YAML template under cfg.templatesDir
+//   - every YAML template under cfg.behavioralTemplatesDir
 //   - every YAML template under cfg.nucleiTemplates
 //
 // Non-existent directories are skipped silently; errors are logged as warnings.
@@ -475,7 +475,7 @@ func collectProtectedPaths(cfg *config, bpfPath string, logger *zap.Logger) []st
 	add(bpfPath)
 
 	// Walk template directories for YAML files.
-	for _, dir := range []string{cfg.templatesDir, cfg.nucleiTemplates} {
+	for _, dir := range []string{cfg.behavioralTemplatesDir, cfg.nucleiTemplates} {
 		if dir == "" {
 			continue
 		}

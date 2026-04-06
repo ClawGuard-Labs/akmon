@@ -4,7 +4,7 @@
 // each template specifies a set of matchers that are evaluated against an
 // EnrichedEvent (and its Session) to decide whether the rule fires.
 //
-// Example template (templates/file/ssh-key-access.yaml):
+// Example template (behavioral-templates/file/ssh-key-access.yaml in clawsec-templates):
 //
 //	id: ssh_key_access
 //	info:
