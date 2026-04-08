@@ -168,7 +168,7 @@ TEMPLATES_SRC ?= ../clawsec-templates
 # Requires: $(TEMPLATES_SRC)/behavioral-templates and $(TEMPLATES_SRC)/nuclei-templates
 # After install: sudo systemctl enable --now clawsec
 .PHONY: install
-install: build
+install: deps gen-vmlinux bpf build
 	@test -d "$(TEMPLATES_SRC)/behavioral-templates" || ( \
 		echo "ERROR: $(TEMPLATES_SRC)/behavioral-templates not found."; \
 		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
