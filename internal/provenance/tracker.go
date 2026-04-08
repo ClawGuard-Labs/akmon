@@ -19,7 +19,7 @@
 // File-level taint (net_connect → file_write → file_read by another process)
 // requires eBPF to emit file_open events for model file paths. Currently the
 // eBPF kernel program only emits file_open for "sensitive" paths (/proc, /sys,
-// /etc, .ssh). See TODO.md → "Model file tracking" for the fix.
+// /etc, .ssh).
 //
 // Until then this tracker operates at the process+network level:
 //

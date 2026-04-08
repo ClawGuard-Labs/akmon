@@ -16,6 +16,7 @@ package detector
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/clawsec/internal/consumer"
 	"github.com/clawsec/internal/correlator"
@@ -61,7 +62,9 @@ func (d *Detector) Analyze(ev *consumer.EnrichedEvent, sess *correlator.Session)
 		}
 
 		// Template fired — apply tag, score, and named rule record.
-		ev.Tags = appendUnique(ev.Tags, t.ID)
+		if !slices.Contains(ev.Tags, t.ID) {
+			ev.Tags = append(ev.Tags, t.ID)
+		}
 		ev.RiskScore += t.Info.RiskScore
 		ev.MatchedRules = append(ev.MatchedRules, consumer.MatchedRule{
 			ID:       t.ID,
@@ -86,18 +89,4 @@ func (d *Detector) Analyze(ev *consumer.EnrichedEvent, sess *correlator.Session)
 		)
 	}
 	return ev
-}
-
-// TemplateCount returns the number of loaded templates (useful for tests/metrics).
-func (d *Detector) TemplateCount() int { return len(d.templates) }
-
-// ── Helper ────────────────────────────────────────────────────────────────
-
-func appendUnique(tags []string, tag string) []string {
-	for _, t := range tags {
-		if t == tag {
-			return tags
-		}
-	}
-	return append(tags, tag)
 }

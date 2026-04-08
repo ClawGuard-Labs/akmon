@@ -1,4 +1,3 @@
-
 package aiprofile
 
 import (
@@ -55,7 +54,7 @@ func ResolveConfigPath(explicit string) (string, error) {
 			return "", err
 		}
 		if st.IsDir() {
-			return "", fmt.Errorf("is a directory")
+			return "", fmt.Errorf("%s: is a directory", abs)
 		}
 		return abs, nil
 	}
