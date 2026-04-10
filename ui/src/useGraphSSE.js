@@ -24,6 +24,7 @@ export function useGraphSSE() {
 
   useEffect(() => {
     let es
+    let reconnectTimer = null
 
     // Diff accumulator — merged across many SSE events, flushed once per rAF.
     const buf = { nodes: [], updatedNodes: [], removedNodeIds: [], edges: [], removedEdgeIds: [], alerts: [] }
@@ -83,6 +84,10 @@ export function useGraphSSE() {
     }
 
     function connect() {
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
       drainBuffer()
       es = new EventSource(`${API}/api/graph/events`)
       esRef.current = es
@@ -115,12 +120,17 @@ export function useGraphSSE() {
       es.onerror = () => {
         setStatus('error')
         es.close()
-        setTimeout(connect, 3000)
+        if (reconnectTimer !== null) clearTimeout(reconnectTimer)
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null
+          connect()
+        }, 3000)
       }
     }
 
     connect()
     return () => {
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer)
       if (rafId !== null) cancelAnimationFrame(rafId)
       if (esRef.current) esRef.current.close()
     }

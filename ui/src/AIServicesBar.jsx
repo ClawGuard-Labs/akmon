@@ -118,7 +118,6 @@ export const AIServicesBar = React.memo(function AIServicesBar() {
                 >
                   {categoryLabel(p.category)}
                 </span>
-                <span className="asb-status asb-status-running">●</span>
               </div>
             ))}
           </div>
@@ -152,7 +151,6 @@ export const AIServicesBar = React.memo(function AIServicesBar() {
                 >
                   {categoryLabel(s.category)}
                 </span>
-                <span className="asb-status asb-status-listening">●</span>
               </div>
             ))}
           </div>
