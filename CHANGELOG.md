@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `Dockerfile.dev` — reproducible Linux toolchain (Go, clang, libbpf, Node) for macOS/Windows contributors.
 - `SECURITY.md`, `SUPPORT.md`, `CHANGELOG.md`, `.github/CODEOWNERS`, `.github/dependabot.yml`.
 - GitHub Actions CI: `go-build-test`, `go-lint`, `bpf-build`, `ui-build` jobs.
-- GitHub Actions release workflow with `goreleaser` producing `onyx_linux_{amd64,arm64}.tar.gz` on tag.
+- GitHub Actions release workflow with `goreleaser` producing `akmon_linux_{amd64,arm64}.tar.gz` on tag.
 - `.golangci.yml` enforcing `gofmt`, `govet`, `errcheck`, `staticcheck`, `ineffassign`, `gosec`.
 - `--cors-origin` flag (repeatable) on the dashboard API.
 - Package-level doc comments on every `internal/*` package.
@@ -20,17 +20,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - DCO sign-off and Conventional Commits guidance in `CONTRIBUTING.md`.
 
 ### Changed
-- **BREAKING:** Project renamed from `ClawSec` to `Onyx`. Module path is now `github.com/ClawGuard-Labs/onyx`. Binary is `onyx`. Install paths are `/usr/local/bin/onyx`, `/usr/lib/onyx/`, `/etc/onyx/`, `/var/log/onyx/`, `/etc/systemd/system/onyx.service`, `/etc/logrotate.d/onyx`.
-- Companion templates repository is now [`ClawGuard-Labs/onyx-templates`](https://github.com/ClawGuard-Labs/onyx-templates) (previously `clawsec-templates`).
+- **BREAKING:** Project renamed from `ClawSec` to `Akmon`. Module path is now `github.com/ClawGuard-Labs/akmon`. Binary is `akmon`. Install paths are `/usr/local/bin/akmon`, `/usr/lib/akmon/`, `/etc/akmon/`, `/var/log/akmon/`, `/etc/systemd/system/akmon.service`, `/etc/logrotate.d/akmon`.
+- Companion templates repository is now [`ClawGuard-Labs/akmon-templates`](https://github.com/ClawGuard-Labs/akmon-templates) (previously `clawsec-templates`).
 - Dashboard API `Access-Control-Allow-Origin` now defaults to `http://localhost:9090` and `http://127.0.0.1:9090` instead of `*`. Extend via `--cors-origin`.
 - `internal/graphapi` shutdown now derives its context from the parent, with a bounded timeout, so host cancellation propagates correctly.
 - `config.yaml`: added missing `category: runtime` to the `cargo` and `rust-ai` process entries.
-- LICENSE year updated to 2025–2026 and copyright holder to "The Onyx Contributors".
+- LICENSE year updated to 2025–2026 and copyright holder to "The Akmon Contributors".
 
 ### Fixed
-- `README.md` security-advisory link pointed to a non-existent org; now points to `github.com/ClawGuard-Labs/onyx/security/advisories/new`.
+- `README.md` security-advisory link pointed to a non-existent org; now points to `github.com/ClawGuard-Labs/akmon/security/advisories/new`.
 - `scripts/gen_vmlinux.sh` bpftool discovery no longer relies on unquoted `ls` output (word-splitting hazard).
-- `Makefile` `verify` target now uses a `trap` to clean up `/sys/fs/bpf/onyx_verify` even when bpftool is interrupted.
+- `Makefile` `verify` target now uses a `trap` to clean up `/sys/fs/bpf/akmon_verify` even when bpftool is interrupted.
 - `tests/helpers_test.go` uses `t.Fatalf` instead of `panic` on log-file creation failure.
 - Several places in `internal/output` and `internal/loader` previously discarded write and `Close` errors; they now log at `warn` level.
 
@@ -39,7 +39,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.1.0] — 2026-04-14
 
-Initial public release of Onyx as an open-source project.
+Initial public release of Akmon as an open-source project.
 
 - Kernel-level behavioral monitoring for AI/ML workloads on Linux using eBPF (CO-RE, BTF).
 - YAML-based detection engine with process, file, network, session, and chain matchers.

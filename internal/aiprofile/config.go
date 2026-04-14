@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ClawGuard-Labs/onyx/internal/constants"
+	"github.com/ClawGuard-Labs/akmon/internal/constants"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,7 +69,7 @@ func ResolveConfigPath(explicit string) (string, error) {
 	}
 
 	var candidates []string
-	candidates = append(candidates, "config.yaml", "/etc/onyx/config.yaml")
+	candidates = append(candidates, "config.yaml", "/etc/akmon/config.yaml")
 
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
@@ -85,7 +85,7 @@ func ResolveConfigPath(explicit string) (string, error) {
 			return path, nil
 		}
 	}
-	return "", fmt.Errorf("config.yaml not found (tried %v); pass --config /path/to/config.yaml or install /etc/onyx/config.yaml (see make install)", candidates)
+	return "", fmt.Errorf("config.yaml not found (tried %v); pass --config /path/to/config.yaml or install /etc/akmon/config.yaml (see make install)", candidates)
 }
 
 func Load(path string) (*Profile, error) {

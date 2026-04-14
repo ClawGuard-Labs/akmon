@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
 )
 
 // ── Event-type constants (must match common.h) ────────────────────────────

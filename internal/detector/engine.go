@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/constants"
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	"github.com/ClawGuard-Labs/onyx/internal/correlator"
-	tmpl "github.com/ClawGuard-Labs/onyx/internal/templates"
+	"github.com/ClawGuard-Labs/akmon/internal/constants"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/correlator"
+	tmpl "github.com/ClawGuard-Labs/akmon/internal/templates"
 )
 
 // Evaluate returns true if all (or any, depending on matchers-condition)

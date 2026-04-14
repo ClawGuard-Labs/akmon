@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
 )
 
 const (

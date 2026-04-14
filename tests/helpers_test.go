@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	"github.com/ClawGuard-Labs/onyx/internal/correlator"
-	"github.com/ClawGuard-Labs/onyx/internal/templates"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/correlator"
+	"github.com/ClawGuard-Labs/akmon/internal/templates"
 )
 
-// Sibling of the onyx repo: ../onyx-templates from repo root; tests/ is one level deeper.
-const templatesDir = "../../onyx-templates/behavioral-templates"
+// Sibling of the akmon repo: ../akmon-templates from repo root; tests/ is one level deeper.
+const templatesDir = "../../akmon-templates/behavioral-templates"
 
 var (
 	allTemplates []templates.Template

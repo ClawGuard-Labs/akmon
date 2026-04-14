@@ -1,4 +1,4 @@
-module github.com/ClawGuard-Labs/onyx
+module github.com/ClawGuard-Labs/akmon
 
 go 1.24.2
 

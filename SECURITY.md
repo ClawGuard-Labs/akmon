@@ -1,6 +1,6 @@
 # Security Policy
 
-Onyx is a kernel-level security sensor. Vulnerabilities in it directly affect the security posture of the hosts it runs on, so we take reports seriously and treat them privately until a fix is available.
+Akmon is a kernel-level security sensor. Vulnerabilities in it directly affect the security posture of the hosts it runs on, so we take reports seriously and treat them privately until a fix is available.
 
 ## Supported versions
 
@@ -16,12 +16,12 @@ Onyx is a kernel-level security sensor. Vulnerabilities in it directly affect th
 
 Preferred channel:
 
-- Open a private [GitHub Security Advisory](https://github.com/ClawGuard-Labs/onyx/security/advisories/new) on this repository.
+- Open a private [GitHub Security Advisory](https://github.com/ClawGuard-Labs/akmon/security/advisories/new) on this repository.
 
 What to include:
 
 - A clear description of the issue and its impact.
-- Steps to reproduce (PoC code, exact `onyx` flags, kernel version, distro).
+- Steps to reproduce (PoC code, exact `akmon` flags, kernel version, distro).
 - Any relevant logs, crash output, or BPF verifier output.
 - Whether the issue is already public anywhere (blog post, tweet, etc.).
 - How you'd like to be credited (name/handle, or anonymous).
@@ -41,7 +41,7 @@ For critical issues (RCE, privilege escalation, sandbox escape) we'll prioritize
 
 **In scope:**
 
-- The Onyx monitor binary and its eBPF programs (`cmd/`, `internal/`, `bpf/`).
+- The Akmon monitor binary and its eBPF programs (`cmd/`, `internal/`, `bpf/`).
 - The dashboard HTTP API (`internal/graphapi/`).
 - Build and release artifacts published on this repository.
 - Documentation that could lead users into an insecure configuration.
@@ -49,9 +49,9 @@ For critical issues (RCE, privilege escalation, sandbox escape) we'll prioritize
 **Out of scope:**
 
 - Vulnerabilities in upstream dependencies (please report to the upstream project). If the way we use a dependency is the issue, that *is* in scope.
-- Findings that require an already-root attacker on the host (Onyx runs as root; the threat model starts from unprivileged attacker).
+- Findings that require an already-root attacker on the host (Akmon runs as root; the threat model starts from unprivileged attacker).
 - Denial-of-service against the dashboard API achievable only from the host itself (the API is intended for localhost use).
-- Issues in the companion [onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates) repository — please open an advisory there instead.
+- Issues in the companion [akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates) repository — please open an advisory there instead.
 
 ## Credit
 

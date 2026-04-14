@@ -1,14 +1,14 @@
 version: 2
-project_name: onyx
+project_name: akmon
 
 before:
   hooks:
     - go mod download
 
 builds:
-  - id: onyx
+  - id: akmon
     main: ./cmd/monitor
-    binary: onyx
+    binary: akmon
     env:
       - CGO_ENABLED=0
     goos:
@@ -22,7 +22,7 @@ builds:
       - -s -w -X main.Version={{.Version}} -X main.Commit={{.Commit}} -X main.Date={{.Date}}
 
 archives:
-  - id: onyx
+  - id: akmon
     formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
@@ -34,10 +34,10 @@ archives:
       - config.yaml
       - src: bpf/monitor.bpf.o
         strip_parent: true
-      - src: scripts/onyx.service
+      - src: scripts/akmon.service
         strip_parent: true
-      - src: scripts/logrotate.d/onyx
-        dst: logrotate.onyx
+      - src: scripts/logrotate.d/akmon
+        dst: logrotate.akmon
 
 checksum:
   name_template: "checksums.txt"

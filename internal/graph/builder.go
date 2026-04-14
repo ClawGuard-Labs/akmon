@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/chagg"
-	"github.com/ClawGuard-Labs/onyx/internal/constants"
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	"github.com/ClawGuard-Labs/onyx/internal/provenance"
+	"github.com/ClawGuard-Labs/akmon/internal/chagg"
+	"github.com/ClawGuard-Labs/akmon/internal/constants"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/provenance"
 )
 
 // liveChain tracks a spawned-edge path from a parent for chain-wise compaction.

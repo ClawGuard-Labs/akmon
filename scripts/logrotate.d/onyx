@@ -1,5 +1,5 @@
-/var/log/onyx/*.log
-/var/log/onyx/*.json {
+/var/log/akmon/*.log
+/var/log/akmon/*.json {
     daily
     rotate 14
     compress
@@ -10,7 +10,7 @@
     sharedscripts
     postrotate
         # signal monitor to reopen log files if running
-        systemctl -q is-active onyx && \
-            systemctl kill --kill-who=main --signal=SIGUSR1 onyx || true
+        systemctl -q is-active akmon && \
+            systemctl kill --kill-who=main --signal=SIGUSR1 akmon || true
     endscript
 }

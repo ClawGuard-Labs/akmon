@@ -1,4 +1,4 @@
-# Code owners for Onyx.
+# Code owners for Akmon.
 # Each line follows: <glob>  <owners...>
 # The last matching line wins, so order more-specific rules below general ones.
 # Replace @ClawGuard-Labs/maintainers with real GitHub handles once the team is set up.

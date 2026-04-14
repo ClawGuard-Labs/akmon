@@ -1,4 +1,4 @@
-# Contributing to Onyx
+# Contributing to Akmon
 
 Thank you for your interest in contributing. This document explains how to get set up, report issues, and submit changes.
 
@@ -26,37 +26,37 @@ macOS / Windows contributors: use the Docker toolchain below. The monitor itself
 ### Build and run
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/onyx.git
-git clone https://github.com/ClawGuard-Labs/onyx-templates.git
-cd onyx
+git clone https://github.com/ClawGuard-Labs/akmon.git
+git clone https://github.com/ClawGuard-Labs/akmon-templates.git
+cd akmon
 make build
 ```
 
-For running the monitor locally, clone **onyx-templates** under `onyx/onyx-templates` or pass `--behavioral-templates` / `--nuclei-templates` (see [README — Quick Start](README.md#quick-start)). For system install, `sudo make install` reads YAML from `../onyx-templates` by default (`TEMPLATES_SRC`).
+For running the monitor locally, clone **akmon-templates** under `akmon/akmon-templates` or pass `--behavioral-templates` / `--nuclei-templates` (see [README — Quick Start](README.md#quick-start)). For system install, `sudo make install` reads YAML from `../akmon-templates` by default (`TEMPLATES_SRC`).
 
 See [README.md](README.md#quick-start) for full options and [Build Targets](README.md#build-targets).
 
 ### Building from macOS / Windows via Docker
 
-Onyx is Linux-only at runtime, but the build toolchain runs inside a provided container image.
+Akmon is Linux-only at runtime, but the build toolchain runs inside a provided container image.
 
 ```bash
 # Build the dev image once
-docker build -t onyx-dev -f Dockerfile.dev .
+docker build -t akmon-dev -f Dockerfile.dev .
 
 # Persistent Go caches (faster subsequent builds)
-docker volume create onyx-gomod
-docker volume create onyx-gobuild
+docker volume create akmon-gomod
+docker volume create akmon-gobuild
 
 # Run any build/test command against the repo
 docker run --rm \
     -v "$PWD:/src" \
-    -v onyx-gomod:/go/pkg/mod \
-    -v onyx-gobuild:/root/.cache/go-build \
-    -w /src onyx-dev go build ./...
+    -v akmon-gomod:/go/pkg/mod \
+    -v akmon-gobuild:/root/.cache/go-build \
+    -w /src akmon-dev go build ./...
 
-docker run --rm -v "$PWD:/src" -w /src onyx-dev make bpf
-docker run --rm -v "$PWD:/src" -w /src onyx-dev bash -c 'cd ui && npm ci && npm run build'
+docker run --rm -v "$PWD:/src" -w /src akmon-dev make bpf
+docker run --rm -v "$PWD:/src" -w /src akmon-dev bash -c 'cd ui && npm ci && npm run build'
 ```
 
 ### Useful make targets
@@ -108,7 +108,7 @@ Keep the summary under 72 characters, imperative mood ("add", not "adds" or "add
 - **Go** — `gofmt` on every file; run `make fmt`. Follow standard Go style. CI enforces `golangci-lint` — see `.golangci.yml`. Exported identifiers must have a godoc comment beginning with the identifier name.
 - **eBPF / C** — match existing style in `bpf/`; run `make fmt` for `clang-format`. All BPF C files carry `SPDX-License-Identifier: MIT` at the top.
 - **Build tags** — Go files under `internal/` and `cmd/` target Linux only. If you add a new file, start it with `//go:build linux`.
-- **Templates** — YAML rules live in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)**; follow [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md) and the layout there.
+- **Templates** — YAML rules live in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)**; follow [AUTHORING.md](https://github.com/ClawGuard-Labs/akmon-templates/blob/main/AUTHORING.md) and the layout there.
 
 ## Testing
 
@@ -133,7 +133,7 @@ make lint
 When you touch `bpf/monitor.bpf.c`, `bpf/common.h`, or the loader in `internal/loader/`:
 
 1. Regenerate `bpf/vmlinux.h` if your kernel differs materially from the checked-in one: `make gen-vmlinux`.
-2. Rebuild and dry-run verify: `make bpf && make verify` — bpftool will load the program into `/sys/fs/bpf/onyx_verify` and unload it.
+2. Rebuild and dry-run verify: `make bpf && make verify` — bpftool will load the program into `/sys/fs/bpf/akmon_verify` and unload it.
 3. Test on at least one additional kernel minor version if possible (5.15 LTS and 6.x).
 4. Call out any new required capabilities or kernel config in the PR description.
 
@@ -145,9 +145,9 @@ When you touch `bpf/monitor.bpf.c`, `bpf/common.h`, or the loader in `internal/l
 
 ## Adding detection rules
 
-Open PRs against **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** (not this repo).
+Open PRs against **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** (not this repo).
 
-- **Behavioral rules** — add `.yaml` under `behavioral-templates/session|file|process|network/`. See [Detection Templates](README.md#detection-templates) and onyx-templates [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md).
+- **Behavioral rules** — add `.yaml` under `behavioral-templates/session|file|process|network/`. See [Detection Templates](README.md#detection-templates) and akmon-templates [AUTHORING.md](https://github.com/ClawGuard-Labs/akmon-templates/blob/main/AUTHORING.md).
 - **Nuclei rules** — add Nuclei v3 HTTP templates under `nuclei-templates/ai-services/`.
 
 ## Recognition

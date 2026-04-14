@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	"github.com/ClawGuard-Labs/onyx/internal/correlator"
-	"github.com/ClawGuard-Labs/onyx/internal/detector"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/correlator"
+	"github.com/ClawGuard-Labs/akmon/internal/detector"
 )
 
 func TestAIProcess(t *testing.T) {

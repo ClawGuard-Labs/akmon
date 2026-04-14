@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a bug or unexpected behavior in Onyx
+about: Report a bug or unexpected behavior in Akmon
 title: '[Bug] '
 labels: bug
 assignees: ''
@@ -16,8 +16,8 @@ A clear description of the bug.
 - **`uname -a`:**
 - **Kernel BTF present:** (`test -f /sys/kernel/btf/vmlinux && echo yes` → )
 - **Go version:** (`go version`)
-- **Onyx version / commit:** (from `onyx --version` or `git rev-parse HEAD`)
-- **Install mode:** (from release tarball / `make install` / manual `./bin/onyx`)
+- **Akmon version / commit:** (from `akmon --version` or `git rev-parse HEAD`)
+- **Install mode:** (from release tarball / `make install` / manual `./bin/akmon`)
 - **Run mode:** (as root / with `setcap`; flags used, e.g. `--grouped`, `--sse`, `--ui`)
 - **AI workload involved (if any):** (e.g. Ollama 0.3.12, Qdrant 1.11, vLLM, a custom Python agent)
 

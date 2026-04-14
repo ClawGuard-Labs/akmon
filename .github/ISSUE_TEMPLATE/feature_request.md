@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest a new feature or improvement for Onyx
+about: Suggest a new feature or improvement for Akmon
 title: '[Feature] '
 labels: enhancement
 assignees: ''
@@ -19,7 +19,7 @@ Which area does it touch?
 - [ ] Core monitor (`cmd/`, `internal/`)
 - [ ] eBPF programs (`bpf/`)
 - [ ] Dashboard / UI (`ui/`)
-- [ ] Detection templates → should this be in [onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates) instead?
+- [ ] Detection templates → should this be in [akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates) instead?
 - [ ] Nuclei integration
 - [ ] Packaging / install / systemd
 

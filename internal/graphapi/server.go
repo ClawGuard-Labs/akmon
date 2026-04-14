@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
-	"github.com/ClawGuard-Labs/onyx/internal/chagg"
-	"github.com/ClawGuard-Labs/onyx/internal/graph"
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
+	"github.com/ClawGuard-Labs/akmon/internal/chagg"
+	"github.com/ClawGuard-Labs/akmon/internal/graph"
 	"go.uber.org/zap"
 )
 

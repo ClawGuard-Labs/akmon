@@ -1,14 +1,14 @@
-# Onyx
+# Akmon
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Go Reference](https://pkg.go.dev/badge/github.com/ClawGuard-Labs/onyx.svg)](https://pkg.go.dev/github.com/ClawGuard-Labs/onyx)
-[![CI](https://github.com/ClawGuard-Labs/onyx/actions/workflows/ci.yml/badge.svg)](https://github.com/ClawGuard-Labs/onyx/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/ClawGuard-Labs/onyx)](https://goreportcard.com/report/github.com/ClawGuard-Labs/onyx)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/ClawGuard-Labs/onyx)](go.mod)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ClawGuard-Labs/akmon.svg)](https://pkg.go.dev/github.com/ClawGuard-Labs/akmon)
+[![CI](https://github.com/ClawGuard-Labs/akmon/actions/workflows/ci.yml/badge.svg)](https://github.com/ClawGuard-Labs/akmon/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ClawGuard-Labs/akmon)](https://goreportcard.com/report/github.com/ClawGuard-Labs/akmon)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/ClawGuard-Labs/akmon)](go.mod)
 
 **Kernel-level behavioral monitoring and active vulnerability scanning for AI/ML workloads on Linux.**
 
-Onyx is an agentic-security sensor: eBPF-powered observation of every AI process on the box (what it executes, which files it touches, which services it calls), combined with active Nuclei scanning of the local AI stack (Qdrant, Ollama, vLLM, ChromaDB, …) the moment the monitor sees something talk to it.
+Akmon is an agentic-security sensor: eBPF-powered observation of every AI process on the box (what it executes, which files it touches, which services it calls), combined with active Nuclei scanning of the local AI stack (Qdrant, Ollama, vLLM, ChromaDB, …) the moment the monitor sees something talk to it.
 
 Two complementary detection engines:
 
@@ -22,7 +22,7 @@ Two complementary detection engines:
 - **Nuclei v3 integration** — active scanning of local AI services when connections are observed
 - **Session correlation** — process tree and session IDs for grouping events
 - **Output** — NDJSON, grouped JSON, or live SSE stream
-- **Detection templates** — shipped in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** (`behavioral-templates/`, `nuclei-templates/`)
+- **Detection templates** — shipped in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** (`behavioral-templates/`, `nuclei-templates/`)
 - **React dashboard** (optional) — graph view and alert panel served by the monitor
 
 ---
@@ -79,20 +79,20 @@ Both detectors fire simultaneously when a connection to a local AI service is ob
 
 ```bash
 # replace <version> with the tag you want, e.g. v0.1.0
-curl -LO "https://github.com/ClawGuard-Labs/onyx/releases/download/<version>/onyx_linux_amd64.tar.gz"
-tar -xzf onyx_linux_amd64.tar.gz
-sudo install -m 0755 onyx /usr/local/bin/onyx
-sudo install -m 0644 monitor.bpf.o /usr/lib/onyx/monitor.bpf.o
+curl -LO "https://github.com/ClawGuard-Labs/akmon/releases/download/<version>/akmon_linux_amd64.tar.gz"
+tar -xzf akmon_linux_amd64.tar.gz
+sudo install -m 0755 akmon /usr/local/bin/akmon
+sudo install -m 0644 monitor.bpf.o /usr/lib/akmon/monitor.bpf.o
 ```
 
 ### From source
 
-YAML detection rules are **not** in this repository. Clone **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** next to `onyx` (or anywhere you prefer).
+YAML detection rules are **not** in this repository. Clone **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** next to `akmon` (or anywhere you prefer).
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/onyx
-git clone https://github.com/ClawGuard-Labs/onyx-templates
-cd onyx
+git clone https://github.com/ClawGuard-Labs/akmon
+git clone https://github.com/ClawGuard-Labs/akmon-templates
+cd akmon
 make build
 ```
 
@@ -101,8 +101,8 @@ make build
 The runtime target is Linux only, but contributors can build on macOS using the provided dev image:
 
 ```bash
-docker build -t onyx-dev -f Dockerfile.dev .
-docker run --rm -v "$PWD:/src" -w /src onyx-dev make build-no-ui
+docker build -t akmon-dev -f Dockerfile.dev .
+docker run --rm -v "$PWD:/src" -w /src akmon-dev make build-no-ui
 ```
 
 Loading eBPF programs into the kernel requires a Linux host; use a VM, a cloud Linux box, or CI (see `.github/workflows/ci.yml`) for runtime tests.
@@ -111,44 +111,44 @@ Loading eBPF programs into the kernel requires a Linux host; use a VM, a cloud L
 
 ## Quick Start
 
-**Option A — defaults** — from the `onyx` repo directory, defaults expect **`./onyx-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `onyx` (nested), or symlink:
+**Option A — defaults** — from the `akmon` repo directory, defaults expect **`./akmon-templates/behavioral-templates`** and **`./nuclei-templates`**. Clone the templates repo **into** `akmon` (nested), or symlink:
 
 ```bash
-git clone https://github.com/ClawGuard-Labs/onyx-templates.git onyx-templates
-ln -sfn onyx-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
-sudo ./bin/onyx
+git clone https://github.com/ClawGuard-Labs/akmon-templates.git akmon-templates
+ln -sfn akmon-templates/nuclei-templates ./nuclei-templates   # optional: default nuclei path
+sudo ./bin/akmon
 ```
 
-If **onyx-templates** sits **next to** `onyx` (sibling), pass paths explicitly:
+If **akmon-templates** sits **next to** `akmon` (sibling), pass paths explicitly:
 
 ```bash
-sudo ./bin/onyx \
-  --behavioral-templates ../onyx-templates/behavioral-templates \
-  --nuclei-templates ../onyx-templates/nuclei-templates
+sudo ./bin/akmon \
+  --behavioral-templates ../akmon-templates/behavioral-templates \
+  --nuclei-templates ../akmon-templates/nuclei-templates
 ```
 
 **More flags:**
 
 ```bash
-sudo ./bin/onyx \
+sudo ./bin/akmon \
   --output          events.json \
   --log-level       info \
   --grouped \
   --group-timeout   500ms
 ```
 
-See [Template bundles (onyx-templates)](#template-bundles-onyx-templates) for installs, authoring, and tests.
+See [Template bundles (akmon-templates)](#template-bundles-akmon-templates) for installs, authoring, and tests.
 
 ---
 
 ## Build Targets
 
 ```bash
-make build          # Compile Go binary + embed eBPF object → bin/onyx
+make build          # Compile Go binary + embed eBPF object → bin/akmon
 make bpf            # Recompile eBPF C → bpf/monitor.bpf.o  (needs clang)
 make gen-vmlinux    # Regenerate vmlinux.h from kernel BTF   (once per kernel)
 make run            # Build and run as root
-make install        # Install to /usr/local/bin/onyx
+make install        # Install to /usr/local/bin/akmon
 make clean          # Remove bin/
 make lint           # Run golangci-lint
 ```
@@ -159,8 +159,8 @@ make lint           # Run golangci-lint
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/onyx/` |
-| `--behavioral-templates <dir>` | `./onyx-templates/behavioral-templates` | Directory containing behavioral YAML rules |
+| `--bpf-obj <path>` | auto-detect | Path to `monitor.bpf.o`. Auto-detected: `./bpf/`, next to binary, `/usr/lib/akmon/` |
+| `--behavioral-templates <dir>` | `./akmon-templates/behavioral-templates` | Directory containing behavioral YAML rules |
 | `--nuclei-templates <dir>` | `./nuclei-templates` | Directory containing Nuclei YAML templates for active scanning |
 | `--no-nuclei` | false | Disable active Nuclei scanning |
 | `--output <file>` | stdout | JSON output file (appended) |
@@ -176,7 +176,7 @@ make lint           # Run golangci-lint
 
 ## Detection Templates
 
-Rules are maintained in **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/onyx-templates/blob/main/AUTHORING.md).
+Rules are maintained in **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)**. Authoring details: [AUTHORING.md](https://github.com/ClawGuard-Labs/akmon-templates/blob/main/AUTHORING.md).
 
 YAML-based rules evaluated against every eBPF event. Rules are loaded at startup — no recompilation required to add or modify them.
 
@@ -268,7 +268,7 @@ Nuclei findings add their own score on top of the behavioral score.
 
 ```bash
 # Start monitor
-sudo ./bin/onyx --log-level debug --output test.json
+sudo ./bin/akmon --log-level debug --output test.json
 
 # In another terminal — trigger rules:
 
@@ -295,7 +295,7 @@ cat test.json | jq '.tags'
 docker run -d -p 6333:6333 qdrant/qdrant
 
 # Start monitor with debug logging
-sudo ./bin/onyx --log-level debug --output nuclei_test.json
+sudo ./bin/akmon --log-level debug --output nuclei_test.json
 
 # Connect something to Qdrant so the monitor sees the port
 curl http://localhost:6333/collections
@@ -312,11 +312,11 @@ cat nuclei_test.json | jq 'select(.event_type == "nuclei_finding")'
 
 ```bash
 # Check behavioral templates load (seen in startup logs)
-sudo ./bin/onyx --log-level info 2>&1 | grep "templates loaded"
-# Expected: INFO  detection templates loaded  {"count": N, "dir": "./onyx-templates/behavioral-templates"}
+sudo ./bin/akmon --log-level info 2>&1 | grep "templates loaded"
+# Expected: INFO  detection templates loaded  {"count": N, "dir": "./akmon-templates/behavioral-templates"}
 
 # Check Nuclei engine starts
-sudo ./bin/onyx --log-level info 2>&1 | grep "nuclei"
+sudo ./bin/akmon --log-level info 2>&1 | grep "nuclei"
 # Expected: INFO  nuclei engine ready  {"templates_dir": "./nuclei-templates"}
 #           INFO  nuclei active scanner enabled
 ```
@@ -324,8 +324,8 @@ sudo ./bin/onyx --log-level info 2>&1 | grep "nuclei"
 ### Full test command
 
 ```bash
-sudo ./bin/onyx \
-  --behavioral-templates ./onyx-templates/behavioral-templates \
+sudo ./bin/akmon \
+  --behavioral-templates ./akmon-templates/behavioral-templates \
   --nuclei-templates ./nuclei-templates \
   --output           events.json \
   --log-level        debug \
@@ -335,32 +335,32 @@ sudo ./bin/onyx \
 
 ---
 
-## Template bundles (onyx-templates)
+## Template bundles (akmon-templates)
 
 | Repository | Role |
 |------------|------|
-| **[onyx](https://github.com/ClawGuard-Labs/onyx)** (this repo) | eBPF monitor, Go engine, UI |
-| **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
+| **[akmon](https://github.com/ClawGuard-Labs/akmon)** (this repo) | eBPF monitor, Go engine, UI |
+| **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** | Behavioral YAML under `behavioral-templates/`, Nuclei YAML under `nuclei-templates/` |
 
 **Local development**
 
-- Clone or symlink so **`./onyx-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
+- Clone or symlink so **`./akmon-templates/behavioral-templates`** (and your Nuclei path) exist from the process working directory, **or** pass `--behavioral-templates` / `--nuclei-templates` explicitly (see [Quick Start](#quick-start)).
 
 **`make install`**
 
-- Install copies YAML from **`TEMPLATES_SRC`** (default: `../onyx-templates` relative to the `onyx` tree):
+- Install copies YAML from **`TEMPLATES_SRC`** (default: `../akmon-templates` relative to the `akmon` tree):
 
   ```bash
   sudo make install
   # or:
-  sudo make install TEMPLATES_SRC=/opt/src/onyx-templates
+  sudo make install TEMPLATES_SRC=/opt/src/akmon-templates
   ```
 
-- Behavioral rules go to **`/etc/onyx/behavioral-templates/`**; Nuclei rules to **`/etc/onyx/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
+- Behavioral rules go to **`/etc/akmon/behavioral-templates/`**; Nuclei rules to **`/etc/akmon/nuclei-templates/`**. The shipped **systemd** unit uses those paths.
 
 **Tests**
 
-- `go test ./...` from `tests/` loads behavioral YAML from **`../../onyx-templates/behavioral-templates`** (sibling of the `onyx` repo). Adjust `tests/helpers_test.go` if your layout differs.
+- `go test ./...` from `tests/` loads behavioral YAML from **`../../akmon-templates/behavioral-templates`** (sibling of the `akmon` repo). Adjust `tests/helpers_test.go` if your layout differs.
 
 ---
 
@@ -382,12 +382,12 @@ sudo make install
 
 | Path | Contents |
 |------|----------|
-| `/usr/local/bin/onyx` | Binary |
-| `/usr/lib/onyx/monitor.bpf.o` | eBPF object |
-| `/etc/onyx/behavioral-templates/` | Behavioral detection rules (from `onyx-templates`) |
-| `/etc/onyx/nuclei-templates/` | Nuclei active scan templates (from `onyx-templates`) |
-| `/etc/systemd/system/onyx.service` | systemd unit |
-| `/etc/logrotate.d/onyx` | Log rotation config |
+| `/usr/local/bin/akmon` | Binary |
+| `/usr/lib/akmon/monitor.bpf.o` | eBPF object |
+| `/etc/akmon/behavioral-templates/` | Behavioral detection rules (from `akmon-templates`) |
+| `/etc/akmon/nuclei-templates/` | Nuclei active scan templates (from `akmon-templates`) |
+| `/etc/systemd/system/akmon.service` | systemd unit |
+| `/etc/logrotate.d/akmon` | Log rotation config |
 
 ### 2. Enable and start
 
@@ -396,28 +396,28 @@ sudo make install
 sudo make enable
 
 # Or manually with systemctl
-sudo systemctl enable --now onyx
+sudo systemctl enable --now akmon
 ```
 
 ### 3. Check status and logs
 
 ```bash
 # Service status
-sudo systemctl status onyx
+sudo systemctl status akmon
 
 # Live logs (journald)
-journalctl -u onyx -f
+journalctl -u akmon -f
 
 # Output log file (NDJSON events)
-tail -f /var/log/onyx/monitor.log
+tail -f /var/log/akmon/monitor.log
 ```
 
 ### 4. Stop / restart / disable
 
 ```bash
-sudo systemctl stop    onyx
-sudo systemctl restart onyx
-sudo systemctl disable onyx   # removes from boot
+sudo systemctl stop    akmon
+sudo systemctl restart akmon
+sudo systemctl disable akmon   # removes from boot
 ```
 
 ### 5. Uninstall
@@ -426,8 +426,8 @@ sudo systemctl disable onyx   # removes from boot
 # Stops the service, disables it, and removes all installed files
 sudo make uninstall
 
-# Logs at /var/log/onyx/ are preserved — remove manually if desired
-sudo rm -rf /var/log/onyx/
+# Logs at /var/log/akmon/ are preserved — remove manually if desired
+sudo rm -rf /var/log/akmon/
 ```
 
 The default `ExecStart` passes the installed template directories and enables the web UI on port 9090:
@@ -441,7 +441,7 @@ http://localhost:9090    ← live graph dashboard
 
 ```bash
 # Start monitor with SSE
-sudo ./bin/onyx --sse :8080
+sudo ./bin/akmon --sse :8080
 
 # Stream events in real-time
 curl -N http://localhost:8080/events
@@ -455,13 +455,13 @@ curl http://localhost:8080/healthz
 ## Project Structure
 
 ```
-onyx/
+akmon/
 ├── bpf/
 │   ├── monitor.bpf.c          # eBPF kernel programs (syscall tracepoints)
 │   ├── common.h               # Shared kernel/userspace structs and constants
 │   ├── vmlinux.h              # BTF-generated kernel headers (CO-RE); see scripts/gen_vmlinux.sh
 │   └── monitor.bpf.o          # produced by `make build` (also under bin/ when copied)
-├── bin/                       # local build outputs: onyx, monitor.bpf.o (often gitignored)
+├── bin/                       # local build outputs: akmon, monitor.bpf.o (often gitignored)
 ├── cmd/monitor/
 │   └── main.go                # Entry point, flags, config.yaml load, pipeline wiring
 ├── internal/
@@ -480,15 +480,15 @@ onyx/
 │   ├── provenance/            # Cross-session file / net_connect taint
 │   └── templates/             # Behavioral template YAML schema + loader
 ├── scripts/
-│   ├── onyx.service           # systemd unit (installed to /etc/systemd/system/)
-│   ├── logrotate.d/onyx
+│   ├── akmon.service           # systemd unit (installed to /etc/systemd/system/)
+│   ├── logrotate.d/akmon
 │   ├── check_deps.sh
 │   └── gen_vmlinux.sh
 ├── tests/                     # `go test ./tests/...`
 ├── ui/                        # Vite + React dashboard source
 ├── assets/                    # Screenshots for this README
 ├── .github/                   # Issue/PR templates, CI workflows, CODEOWNERS
-├── config.yaml                # Default AI profile; install copies to /etc/onyx/config.yaml
+├── config.yaml                # Default AI profile; install copies to /etc/akmon/config.yaml
 ├── Dockerfile.dev             # Linux build/test toolchain (Go + clang + libbpf + Node)
 ├── go.mod
 ├── Makefile
@@ -501,18 +501,18 @@ onyx/
 └── LICENSE
 ```
 
-Behavioral and Nuclei YAML live in the separate **[onyx-templates](https://github.com/ClawGuard-Labs/onyx-templates)** repository.
+Behavioral and Nuclei YAML live in the separate **[akmon-templates](https://github.com/ClawGuard-Labs/akmon-templates)** repository.
 
 ### Preview
 
 <p align="center">
   <img src="./assets/logs.png" width="1000"><br>
-  <em>Realtime logs (Onyx running as a systemd service)</em>
+  <em>Realtime logs (Akmon running as a systemd service)</em>
 </p>
 
 <p align="center">
   <img src="./assets/dashboard.png" width="1000"><br>
-  <em>Onyx Dashboard</em>
+  <em>Akmon Dashboard</em>
 </p>
 
 <p align="center">
@@ -550,23 +550,23 @@ Behavioral and Nuclei YAML live in the separate **[onyx-templates](https://githu
 Your kernel wasn't built with `CONFIG_DEBUG_INFO_BTF=y`. Stock Ubuntu 22.04/24.04 and Debian 12 kernels already have BTF. If you're on a custom kernel, rebuild with `CONFIG_DEBUG_INFO_BTF=y` and `CONFIG_DEBUG_INFO_BTF_MODULES=y`.
 
 **Permission denied when loading eBPF.**
-You need one of: run as root, or grant `CAP_BPF`, `CAP_PERFMON`, `CAP_NET_ADMIN` via `setcap cap_bpf,cap_perfmon,cap_net_admin+eip ./bin/onyx`. Some distros also require `sysctl kernel.unprivileged_bpf_disabled=0` for non-root operation.
+You need one of: run as root, or grant `CAP_BPF`, `CAP_PERFMON`, `CAP_NET_ADMIN` via `setcap cap_bpf,cap_perfmon,cap_net_admin+eip ./bin/akmon`. Some distros also require `sysctl kernel.unprivileged_bpf_disabled=0` for non-root operation.
 
 **`clang: command not found` when running `make bpf`.**
 Install the eBPF toolchain: `sudo apt-get install -y clang llvm libbpf-dev linux-tools-$(uname -r) linux-tools-common`.
 
 **I'm on macOS and `make build` fails.**
-Onyx is Linux-only at runtime. Use `Dockerfile.dev` to build in a container (see [Build on macOS](#build-on-macos-via-docker)), and run the binary on a Linux host.
+Akmon is Linux-only at runtime. Use `Dockerfile.dev` to build in a container (see [Build on macOS](#build-on-macos-via-docker)), and run the binary on a Linux host.
 
-**CI says `../onyx-templates/behavioral-templates` missing.**
-Tests expect the templates repo to live as a sibling directory. Clone it with `git clone https://github.com/ClawGuard-Labs/onyx-templates ../onyx-templates` (or override `TEMPLATES_SRC` in the Makefile).
+**CI says `../akmon-templates/behavioral-templates` missing.**
+Tests expect the templates repo to live as a sibling directory. Clone it with `git clone https://github.com/ClawGuard-Labs/akmon-templates ../akmon-templates` (or override `TEMPLATES_SRC` in the Makefile).
 
 ---
 
 ## Community
 
-- **Report a bug**: [GitHub Issues](https://github.com/ClawGuard-Labs/onyx/issues)
-- **Propose a feature**: [GitHub Discussions](https://github.com/ClawGuard-Labs/onyx/discussions)
+- **Report a bug**: [GitHub Issues](https://github.com/ClawGuard-Labs/akmon/issues)
+- **Propose a feature**: [GitHub Discussions](https://github.com/ClawGuard-Labs/akmon/discussions)
 - **Report a vulnerability**: see [SECURITY.md](./SECURITY.md)
 
 ---

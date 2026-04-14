@@ -32,10 +32,10 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
-	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
-	"github.com/ClawGuard-Labs/onyx/internal/constants"
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	outpkg "github.com/ClawGuard-Labs/onyx/internal/output"
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
+	"github.com/ClawGuard-Labs/akmon/internal/constants"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	outpkg "github.com/ClawGuard-Labs/akmon/internal/output"
 )
 
 const (

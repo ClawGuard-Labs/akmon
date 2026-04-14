@@ -1,6 +1,6 @@
 //go:build linux
 
-// Command onyx — host-level eBPF monitoring for AI agent processes.
+// Command akmon — host-level eBPF monitoring for AI agent processes.
 //
 // Architecture:
 //
@@ -24,11 +24,11 @@
 //   └─────────────────────────────────────────────────────────────────┘
 //
 // Usage:
-//   sudo ./bin/onyx [flags]
+//   sudo ./bin/akmon [flags]
 //
 // Flags:
 //   --bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
-//   --behavioral-templates  path to behavioral YAML dir (default: ./onyx-templates/behavioral-templates)
+//   --behavioral-templates  path to behavioral YAML dir (default: ./akmon-templates/behavioral-templates)
 //   --output      JSON output file        (default: stdout)
 //   --sse         SSE listen address      (default: disabled)
 //   --ui          graph dashboard address (default: disabled)
@@ -51,17 +51,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
-	"github.com/ClawGuard-Labs/onyx/internal/chagg"
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
-	"github.com/ClawGuard-Labs/onyx/internal/correlator"
-	"github.com/ClawGuard-Labs/onyx/internal/detector"
-	"github.com/ClawGuard-Labs/onyx/internal/graph"
-	"github.com/ClawGuard-Labs/onyx/internal/graphapi"
-	"github.com/ClawGuard-Labs/onyx/internal/loader"
-	"github.com/ClawGuard-Labs/onyx/internal/nucleiscanner"
-	"github.com/ClawGuard-Labs/onyx/internal/output"
-	"github.com/ClawGuard-Labs/onyx/internal/provenance"
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
+	"github.com/ClawGuard-Labs/akmon/internal/chagg"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/correlator"
+	"github.com/ClawGuard-Labs/akmon/internal/detector"
+	"github.com/ClawGuard-Labs/akmon/internal/graph"
+	"github.com/ClawGuard-Labs/akmon/internal/graphapi"
+	"github.com/ClawGuard-Labs/akmon/internal/loader"
+	"github.com/ClawGuard-Labs/akmon/internal/nucleiscanner"
+	"github.com/ClawGuard-Labs/akmon/internal/output"
+	"github.com/ClawGuard-Labs/akmon/internal/provenance"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -106,8 +106,8 @@ func main() {
 	showVersion := false
 
 	flag.StringVar(&cfg.bpfObjPath, "bpf-obj", "",
-		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/onyx/)")
-	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./onyx-templates/behavioral-templates",
+		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/akmon/)")
+	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./akmon-templates/behavioral-templates",
 		"Directory containing behavioral YAML detection rules")
 	flag.StringVar(&cfg.nucleiTemplates, "nuclei-templates", "./nuclei-templates",
 		"Directory containing Nuclei YAML templates for active scanning")
@@ -150,7 +150,7 @@ func main() {
 	}
 
 	if showVersion {
-		fmt.Printf("onyx %s\n", Version)
+		fmt.Printf("akmon %s\n", Version)
 		os.Exit(0)
 	}
 
@@ -225,7 +225,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	//   - every YAML template file (behavioral + nuclei)
 	//
 	// We resolve the binary path via os.Executable() so it works whether the
-	// user ran ./bin/onyx or /usr/local/bin/onyx.
+	// user ran ./bin/akmon or /usr/local/bin/akmon.
 	protectedPaths := collectProtectedPaths(cfg, bpfPath, logger)
 	if err := objs.PopulateProtectionMaps(selfPID, protectedPaths, logger); err != nil {
 		// Non-fatal: log and continue.  LSM hooks will simply allow everything
@@ -257,7 +257,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	det, err := detector.New(logger, cfg.behavioralTemplatesDir)
 	if err != nil {
 		return fmt.Errorf("loading detection templates: %w\n"+
-			"  Clone onyx-templates alongside this binary (./onyx-templates/behavioral-templates)\n"+
+			"  Clone akmon-templates alongside this binary (./akmon-templates/behavioral-templates)\n"+
 			"  or pass: --behavioral-templates /path/to/behavioral-templates", err)
 	}
 
@@ -448,7 +448,7 @@ func splitOutputPaths(path string) (logsPath, rulesPath string) {
 //  1. Explicit --bpf-obj flag value
 //  2. Same directory as the running binary (deployment default)
 //  3. bpf/monitor.bpf.o relative to CWD  (development / make run)
-//  4. /usr/lib/onyx/monitor.bpf.o  (installed via make install)
+//  4. /usr/lib/akmon/monitor.bpf.o  (installed via make install)
 func findBPFObject(flagPath string) (string, error) {
 	candidates := []string{}
 
@@ -463,7 +463,7 @@ func findBPFObject(flagPath string) (string, error) {
 
 	candidates = append(candidates,
 		"bpf/monitor.bpf.o",
-		"/usr/lib/onyx/monitor.bpf.o",
+		"/usr/lib/akmon/monitor.bpf.o",
 	)
 
 	for _, p := range candidates {

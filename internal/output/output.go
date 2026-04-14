@@ -49,7 +49,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
 	"go.uber.org/zap"
 )
 
@@ -347,7 +347,7 @@ func sseConnect(rw http.ResponseWriter, r *http.Request, logger *zap.Logger) cha
 	rw.Header().Set("Cache-Control", "no-cache")
 	rw.Header().Set("Connection", "keep-alive")
 	rw.WriteHeader(http.StatusOK)
-	if _, err := fmt.Fprintf(rw, ": onyx stream connected\n\n"); err != nil {
+	if _, err := fmt.Fprintf(rw, ": akmon stream connected\n\n"); err != nil {
 		logger.Warn("SSE greeting write failed", zap.Error(err))
 	}
 	if f, ok := rw.(http.Flusher); ok {

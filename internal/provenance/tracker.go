@@ -44,9 +44,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
-	"github.com/ClawGuard-Labs/onyx/internal/constants"
-	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/akmon/internal/aiprofile"
+	"github.com/ClawGuard-Labs/akmon/internal/constants"
+	"github.com/ClawGuard-Labs/akmon/internal/consumer"
 )
 
 // ─── constants ───────────────────────────────────────────────────────────────

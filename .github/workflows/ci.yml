@@ -18,25 +18,25 @@ jobs:
     name: Go build + test
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout onyx
+      - name: Checkout akmon
         uses: actions/checkout@v4
 
-      - name: Checkout onyx-templates (sibling)
+      - name: Checkout akmon-templates (sibling)
         uses: actions/checkout@v4
         with:
-          repository: ClawGuard-Labs/onyx-templates
-          path: ../onyx-templates-src
+          repository: ClawGuard-Labs/akmon-templates
+          path: ../akmon-templates-src
           fetch-depth: 1
         continue-on-error: true
 
-      - name: Position onyx-templates as sibling of onyx
+      - name: Position akmon-templates as sibling of akmon
         shell: bash
         run: |
-          if [ -d "${{ github.workspace }}/../onyx-templates-src" ]; then
-            mv "${{ github.workspace }}/../onyx-templates-src" "${{ github.workspace }}/../onyx-templates"
-            echo "templates checked out at ../onyx-templates"
+          if [ -d "${{ github.workspace }}/../akmon-templates-src" ]; then
+            mv "${{ github.workspace }}/../akmon-templates-src" "${{ github.workspace }}/../akmon-templates"
+            echo "templates checked out at ../akmon-templates"
           else
-            echo "::warning::onyx-templates repo not available; template-dependent tests will skip."
+            echo "::warning::akmon-templates repo not available; template-dependent tests will skip."
           fi
 
       - name: Set up Go
@@ -53,10 +53,10 @@ jobs:
 
       - name: go test
         run: |
-          if [ -d ../onyx-templates ]; then
+          if [ -d ../akmon-templates ]; then
             go test ./tests/... -race -count=1
           else
-            echo "Skipping tests that require ../onyx-templates"
+            echo "Skipping tests that require ../akmon-templates"
             go test ./tests/... -race -count=1 -run '^$' || true
           fi
 

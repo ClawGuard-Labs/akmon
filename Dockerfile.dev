@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:1
-# Development & CI toolchain for Onyx.
+# Development & CI toolchain for Akmon.
 # Ships everything needed to build the Go daemon, compile the eBPF object,
 # and build the React dashboard. This image does NOT run the daemon — loading
 # eBPF into the kernel must happen on a real Linux host.
 #
 # Build once:
-#   docker build -t onyx-dev -f Dockerfile.dev .
+#   docker build -t akmon-dev -f Dockerfile.dev .
 #
 # Use per command:
-#   docker run --rm -v "$PWD:/src" -w /src onyx-dev go build ./...
-#   docker run --rm -v "$PWD:/src" -w /src onyx-dev make bpf
-#   docker run --rm -v "$PWD:/src" -w /src onyx-dev bash -c 'cd ui && npm ci && npm run build'
+#   docker run --rm -v "$PWD:/src" -w /src akmon-dev go build ./...
+#   docker run --rm -v "$PWD:/src" -w /src akmon-dev make bpf
+#   docker run --rm -v "$PWD:/src" -w /src akmon-dev bash -c 'cd ui && npm ci && npm run build'
 
 FROM golang:1.24-bookworm
 
