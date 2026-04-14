@@ -89,7 +89,9 @@ ai:
     - name: openclaw-gatewa
       category: agent
     - name: cargo
+      category: runtime
     - name: rust-ai
+      category: runtime
 
   default_process_category: other
   default_service_category: inference

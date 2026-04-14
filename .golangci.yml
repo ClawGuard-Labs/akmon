@@ -1,0 +1,42 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - gosec
+    - gofmt
+    - goimports
+    - unused
+    - unconvert
+
+linters-settings:
+  gosec:
+    excludes:
+      # G204 (command exec with variable): the scanner invokes external tools with fixed arg shapes.
+      - G204
+      # G115 (integer overflow conversion): noisy around eBPF struct fields.
+      - G115
+  errcheck:
+    check-type-assertions: false
+    check-blank: false
+
+issues:
+  exclude-dirs:
+    - bpf
+    - internal/graphapi/static
+    - ui
+  exclude-rules:
+    # Generated eBPF type decoder has intentionally ignored errors in decoder paths.
+    - path: internal/consumer/events\.go
+      linters: [errcheck]
+    # Test helpers frequently ignore Close errors on cleanup.
+    - path: _test\.go
+      linters: [errcheck, gosec]
+  max-issues-per-linter: 0
+  max-same-issues: 0

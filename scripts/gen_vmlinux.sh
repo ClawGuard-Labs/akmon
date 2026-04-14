@@ -40,8 +40,8 @@ echo "[*] Kernel: $(uname -r)"
 BPFTOOL=""
 for candidate in bpftool \
                  /usr/sbin/bpftool \
-                 /usr/lib/linux-tools/$(uname -r)/bpftool \
-                 $(ls /usr/lib/linux-tools/*/bpftool 2>/dev/null | tail -1); do
+                 "/usr/lib/linux-tools/$(uname -r)/bpftool" \
+                 "$(find /usr/lib/linux-tools -maxdepth 2 -name bpftool -type f 2>/dev/null | sort -r | head -n1)"; do
     if command -v "$candidate" &>/dev/null 2>&1; then
         BPFTOOL="$candidate"
         break

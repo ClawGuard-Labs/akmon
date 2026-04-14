@@ -1,0 +1,37 @@
+# Code owners for Onyx.
+# Each line follows: <glob>  <owners...>
+# The last matching line wins, so order more-specific rules below general ones.
+# Replace @ClawGuard-Labs/maintainers with real GitHub handles once the team is set up.
+
+# Default owner for anything not otherwise matched.
+*                                       @ClawGuard-Labs/maintainers
+
+# eBPF kernel programs — touchy, Linux kernel expertise required.
+/bpf/                                   @ClawGuard-Labs/maintainers
+/internal/loader/                       @ClawGuard-Labs/maintainers
+
+# Detection engine and session logic.
+/internal/detector/                     @ClawGuard-Labs/maintainers
+/internal/correlator/                   @ClawGuard-Labs/maintainers
+/internal/provenance/                   @ClawGuard-Labs/maintainers
+/internal/templates/                    @ClawGuard-Labs/maintainers
+
+# Active scanning integration.
+/internal/nucleiscanner/                @ClawGuard-Labs/maintainers
+
+# Dashboard API + React UI.
+/internal/graphapi/                     @ClawGuard-Labs/maintainers
+/ui/                                    @ClawGuard-Labs/maintainers
+
+# CLI entry point.
+/cmd/                                   @ClawGuard-Labs/maintainers
+
+# Release engineering, packaging, CI.
+/Makefile                               @ClawGuard-Labs/maintainers
+/Dockerfile.dev                         @ClawGuard-Labs/maintainers
+/scripts/                               @ClawGuard-Labs/maintainers
+/.github/workflows/                     @ClawGuard-Labs/maintainers
+/.goreleaser.yaml                       @ClawGuard-Labs/maintainers
+
+# Security-policy changes need security review.
+/SECURITY.md                            @ClawGuard-Labs/maintainers

@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	"github.com/clawsec/internal/templates"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/correlator"
+	"github.com/ClawGuard-Labs/onyx/internal/templates"
 )
 
-// Sibling of the clawsec repo: ../clawsec-templates from repo root; tests/ is one level deeper.
-const templatesDir = "../../clawsec-templates/behavioral-templates"
+// Sibling of the onyx repo: ../onyx-templates from repo root; tests/ is one level deeper.
+const templatesDir = "../../onyx-templates/behavioral-templates"
 
 var (
 	allTemplates []templates.Template
@@ -42,7 +42,9 @@ func TestMain(m *testing.M) {
 
 	loggersMu.Lock()
 	for _, f := range logFiles {
-		f.Close()
+		if err := f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "close log file: %v\n", err)
+		}
 	}
 	loggersMu.Unlock()
 
@@ -65,7 +67,7 @@ func categoryLogger(name string) *log.Logger {
 		0o644,
 	)
 	if err != nil {
-		panic(fmt.Sprintf("cannot create log file for %q: %v", name, err))
+		log.Fatalf("cannot create log file for %q: %v", name, err)
 	}
 	logFiles = append(logFiles, f)
 

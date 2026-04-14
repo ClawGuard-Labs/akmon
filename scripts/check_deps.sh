@@ -44,7 +44,7 @@ check "clang >= 12"   "clang --version | grep -E 'version (1[2-9]|[2-9][0-9])'" 
 check "llvm-strip"    "llvm-strip --version" \
       "sudo apt-get install -y llvm"
 
-check "go >= 1.21"    "go version | grep -E 'go1\.(2[1-9]|[3-9][0-9])'" \
+check "go >= 1.22"    "go version | grep -E 'go1\.(2[2-9]|[3-9][0-9])'" \
       "https://go.dev/dl/ or: sudo snap install go --classic"
 
 check "make"          "make --version" \

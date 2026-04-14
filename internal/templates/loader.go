@@ -1,3 +1,8 @@
+//go:build linux
+
+// Package templates defines the behavioral detection template schema and
+// loader. Templates are YAML files evaluated by the detector against every
+// enriched event.
 package templates
 
 import (

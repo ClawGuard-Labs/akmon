@@ -1,4 +1,4 @@
-module github.com/clawsec
+module github.com/ClawGuard-Labs/onyx
 
 go 1.24.2
 

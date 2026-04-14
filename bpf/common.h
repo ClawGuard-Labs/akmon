@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /* common.h — shared types, constants, and map key definitions
  *
  * Written by eBPF programs, read by Go daemon via ring buffer.

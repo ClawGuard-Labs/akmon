@@ -1,11 +1,11 @@
-# Makefile — ClawSec
+# Makefile — Onyx
 #
 # Build pipeline:
 #   1. gen-vmlinux : generate bpf/vmlinux.h from running kernel BTF
 #   2. bpf         : compile monitor.bpf.c → monitor.bpf.o (eBPF bytecode)
 #   3. ui          : build React dashboard (Vite) → internal/graphapi/static/
 #   4. build       : compile Go daemon binary (embeds the built UI)
-#   5. install     : install binary, BPF object, templates from clawsec-templates + systemd unit
+#   5. install     : install binary, BPF object, templates from onyx-templates + systemd unit
 #
 # Targets:
 #   make deps          — check all build/runtime dependencies
@@ -18,10 +18,10 @@
 #   make run           — build and run as root (requires root)
 #   make fmt           — format Go and C source files
 #   make install       — install as systemd service (then: sudo make enable)
-#                      — set TEMPLATES_SRC=../clawsec-templates (default) to find YAML bundles
+#                      — set TEMPLATES_SRC=../onyx-templates (default) to find YAML bundles
 #   make uninstall     — stop, disable and remove all installed files
-#   make enable        — systemctl enable --now clawsec
-#   make disable       — systemctl disable --now clawsec
+#   make enable        — systemctl enable --now onyx
+#   make disable       — systemctl disable --now onyx
 
 # ── Tool configuration ────────────────────────────────────────────────────────
 CLANG           ?= clang
@@ -33,7 +33,7 @@ BPFTOOL         ?= bpftool
 BPF_SRC         := bpf/monitor.bpf.c
 BPF_OBJ         := bpf/monitor.bpf.o
 BPF_VMLINUX     := bpf/vmlinux.h
-BINARY          := bin/monitor
+BINARY          := bin/onyx
 CMD_DIR         := cmd/monitor
 
 # ── Architecture ──────────────────────────────────────────────────────────────
@@ -138,12 +138,14 @@ bpf-only: $(BPF_OBJ)
 
 # ── Verify the eBPF object (dry-run load) ────────────────────────────────────
 # Uses bpftool to verify the program without actually loading it.
+# The trap ensures the pinned path is cleaned up even if bpftool is interrupted.
 .PHONY: verify
 verify: $(BPF_OBJ)
 	@echo "==> Verifying eBPF program with bpftool..."
-	@$(BPFTOOL) prog load $(BPF_OBJ) /sys/fs/bpf/monitor_test type tracepoint \
-	    2>&1 && rm -f /sys/fs/bpf/monitor_test && echo "  [+] Verification passed." \
-	    || echo "  [!] Verification failed. Check verifier output above."
+	@trap 'rm -f /sys/fs/bpf/onyx_verify' EXIT INT TERM; \
+	 $(BPFTOOL) prog load $(BPF_OBJ) /sys/fs/bpf/onyx_verify type tracepoint 2>&1 \
+	    && echo "  [+] Verification passed." \
+	    || { echo "  [!] Verification failed. Check verifier output above."; exit 1; }
 
 # ── Run (requires root) ───────────────────────────────────────────────────────
 .PHONY: run
@@ -152,7 +154,7 @@ run: build
 	sudo $(BINARY)
 
 # ── Install paths ─────────────────────────────────────────────────────────────
-SVC_NAME     := clawsec
+SVC_NAME     := onyx
 SVC_BINARY   := /usr/local/bin/$(SVC_NAME)
 SVC_LIB      := /usr/lib/$(SVC_NAME)
 SVC_ETC      := /etc/$(SVC_NAME)
@@ -160,22 +162,22 @@ SVC_LOG      := /var/log/$(SVC_NAME)
 SVC_UNIT     := /etc/systemd/system/$(SVC_NAME).service
 SVC_ROTATE   := /etc/logrotate.d/$(SVC_NAME)
 
-# Checkout of https://github.com/ClawGuard-Labs/clawsec-templates
-TEMPLATES_SRC ?= ../clawsec-templates
+# Checkout of https://github.com/ClawGuard-Labs/onyx-templates
+TEMPLATES_SRC ?= ../onyx-templates
 
 # ── Install ───────────────────────────────────────────────────────────────────
 # Installs binary, BPF object, YAML templates from TEMPLATES_SRC, systemd unit, logrotate.
 # Requires: $(TEMPLATES_SRC)/behavioral-templates and $(TEMPLATES_SRC)/nuclei-templates
-# After install: sudo systemctl enable --now clawsec
+# After install: sudo systemctl enable --now onyx
 .PHONY: install
 install: deps gen-vmlinux bpf build
 	@test -d "$(TEMPLATES_SRC)/behavioral-templates" || ( \
 		echo "ERROR: $(TEMPLATES_SRC)/behavioral-templates not found."; \
-		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		echo "  Clone onyx-templates next to onyx, or run: sudo make install TEMPLATES_SRC=/path/to/onyx-templates"; \
 		exit 1)
 	@test -d "$(TEMPLATES_SRC)/nuclei-templates" || ( \
 		echo "ERROR: $(TEMPLATES_SRC)/nuclei-templates not found."; \
-		echo "  Clone clawsec-templates next to clawsec, or run: sudo make install TEMPLATES_SRC=/path/to/clawsec-templates"; \
+		echo "  Clone onyx-templates next to onyx, or run: sudo make install TEMPLATES_SRC=/path/to/onyx-templates"; \
 		exit 1)
 	@echo "==> Creating directories..."
 	sudo install -d -m 0755 $(SVC_LIB)
@@ -247,12 +249,21 @@ fmt:
 	    clang-format -i bpf/*.c bpf/*.h || \
 	    echo "  [~] clang-format not found, skipping C formatting."
 
+# ── Lint (requires golangci-lint on PATH) ────────────────────────────────────
+.PHONY: lint
+lint:
+	@echo "==> Running golangci-lint..."
+	@command -v golangci-lint >/dev/null 2>&1 || { \
+	    echo "  [!] golangci-lint not installed. Install: https://golangci-lint.run/welcome/install/"; \
+	    exit 1; }
+	golangci-lint run ./...
+
 # ── Clean ────────────────────────────────────────────────────────────────────
 .PHONY: clean
 clean:
 	@echo "==> Cleaning build artifacts..."
 	rm -f $(BPF_OBJ)
-	rm -f bin/monitor bin/monitor.bpf.o
+	rm -f $(BINARY) bin/monitor.bpf.o
 	rm -rf internal/graphapi/static/assets
 	@echo "==> Clean complete. (vmlinux.h and ui/node_modules preserved)"
 
@@ -265,7 +276,7 @@ distclean: clean
 # ── Help ─────────────────────────────────────────────────────────────────────
 .PHONY: help
 help:
-	@echo "ClawSec — eBPF AI Agent Monitoring Tool"
+	@echo "Onyx — eBPF agent security monitor"
 	@echo ""
 	@echo "Targets:"
 	@echo "  deps          Check all build and runtime dependencies"
@@ -276,12 +287,13 @@ help:
 	@echo "  build-no-ui   Full build skipping React rebuild (faster iteration)"
 	@echo "  verify        Dry-run verify eBPF program with bpftool"
 	@echo "  run           Build and run as root"
-	@echo "  install       Install binary, BPF, YAML from TEMPLATES_SRC (../clawsec-templates), systemd + logrotate"
+	@echo "  install       Install binary, BPF, YAML from TEMPLATES_SRC (../onyx-templates), systemd + logrotate"
 	@echo "  uninstall     Stop, disable, and remove all installed files"
-	@echo "  enable        systemctl enable --now clawsec"
-	@echo "  disable       systemctl disable --now clawsec"
+	@echo "  enable        systemctl enable --now onyx"
+	@echo "  disable       systemctl disable --now onyx"
 	@echo "  test          Run template detection tests (logs in tests/logs/)"
 	@echo "  fmt           Format Go and C source files"
+	@echo "  lint          Run golangci-lint"
 	@echo "  clean         Remove build artifacts"
 	@echo "  distclean     Remove all generated files including vmlinux.h"
 	@echo ""
@@ -289,4 +301,4 @@ help:
 	@echo "  make deps"
 	@echo "  make gen-vmlinux"
 	@echo "  make build"
-	@echo "  sudo ./bin/monitor --ui :9090"
+	@echo "  sudo ./bin/onyx --ui :9090"

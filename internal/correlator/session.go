@@ -1,3 +1,5 @@
+//go:build linux
+
 // session.go — AI activity session definition.
 //
 // A Session groups all events from a single AI agent's execution tree.
@@ -16,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
 )
 
 const (

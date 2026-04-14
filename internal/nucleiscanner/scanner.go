@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package nucleiscanner integrates the Nuclei v3 engine to actively probe
 // AI/ML services detected by the eBPF monitor.
 //
@@ -30,10 +32,10 @@ import (
 	"github.com/projectdiscovery/nuclei/v3/pkg/output"
 	"go.uber.org/zap"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	outpkg "github.com/clawsec/internal/output"
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/constants"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	outpkg "github.com/ClawGuard-Labs/onyx/internal/output"
 )
 
 const (

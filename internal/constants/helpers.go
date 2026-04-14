@@ -1,3 +1,7 @@
+//go:build linux
+
+// Package constants holds small pure helpers (file-extension checks,
+// localhost detection, severity scoring) shared across the monitor.
 package constants
 
 import "strings"

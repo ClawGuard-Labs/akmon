@@ -1,0 +1,63 @@
+version: 2
+project_name: onyx
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: onyx
+    main: ./cmd/monitor
+    binary: onyx
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.Version={{.Version}} -X main.Commit={{.Commit}} -X main.Date={{.Date}}
+
+archives:
+  - id: onyx
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - SECURITY.md
+      - config.yaml
+      - src: bpf/monitor.bpf.o
+        strip_parent: true
+      - src: scripts/onyx.service
+        strip_parent: true
+      - src: scripts/logrotate.d/onyx
+        dst: logrotate.onyx
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  draft: true
+  prerelease: auto
+  name_template: "v{{ .Version }}"

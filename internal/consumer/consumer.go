@@ -1,3 +1,5 @@
+//go:build linux
+
 // consumer.go — ring buffer poller and event dispatcher.
 //
 // The Consumer goroutine continuously reads from the eBPF ring buffer,
@@ -25,7 +27,7 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/ringbuf"
 	"go.uber.org/zap"
-	"github.com/clawsec/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
 )
 
 // Consumer polls the eBPF ring buffer and dispatches decoded events.

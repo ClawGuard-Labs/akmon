@@ -1,10 +1,12 @@
+//go:build linux
+
 // Package templates defines the YAML detection-template schema and loader.
 //
 // Templates follow a Nuclei-inspired design adapted for system-level events:
 // each template specifies a set of matchers that are evaluated against an
 // EnrichedEvent (and its Session) to decide whether the rule fires.
 //
-// Example template (behavioral-templates/file/ssh-key-access.yaml in clawsec-templates):
+// Example template (behavioral-templates/file/ssh-key-access.yaml in onyx-templates):
 //
 //	id: ssh_key_access
 //	info:

@@ -1,3 +1,5 @@
+//go:build linux
+
 // correlator.go — AI activity session management engine.
 //
 // The Correlator receives decoded events from the consumer and:
@@ -34,7 +36,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
 	"go.uber.org/zap"
 )
 

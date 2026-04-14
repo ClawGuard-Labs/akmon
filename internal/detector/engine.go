@@ -1,3 +1,5 @@
+//go:build linux
+
 // engine.go — pure template-evaluation logic.
 //
 // Evaluate() is the only exported function. It takes a compiled Template and
@@ -13,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	tmpl "github.com/clawsec/internal/templates"
+	"github.com/ClawGuard-Labs/onyx/internal/constants"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/correlator"
+	tmpl "github.com/ClawGuard-Labs/onyx/internal/templates"
 )
 
 // Evaluate returns true if all (or any, depending on matchers-condition)

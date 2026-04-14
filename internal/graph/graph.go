@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package graph maintains an in-memory provenance graph and broadcasts
 // incremental diffs to SSE subscribers.
 //

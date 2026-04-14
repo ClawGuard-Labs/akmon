@@ -1,3 +1,11 @@
 blank_issues_enabled: true
-contact_links: []
-title: ''
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/ClawGuard-Labs/onyx/security/advisories/new
+    about: Please report security vulnerabilities privately via a GitHub Security Advisory, not a public issue.
+  - name: Detection rule / template
+    url: https://github.com/ClawGuard-Labs/onyx-templates/issues/new
+    about: Bugs or requests about specific YAML rules belong in the onyx-templates repository.
+  - name: Question / discussion
+    url: https://github.com/ClawGuard-Labs/onyx/discussions
+    about: For open-ended questions and ideas, start a Discussion.

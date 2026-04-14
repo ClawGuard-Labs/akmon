@@ -3,8 +3,8 @@ package tests
 import (
 	"testing"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/detector"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/detector"
 )
 
 func TestOutboundHTTP(t *testing.T) {

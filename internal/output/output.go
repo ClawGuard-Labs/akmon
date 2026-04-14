@@ -1,3 +1,5 @@
+//go:build linux
+
 // output.go — structured JSON writer, SSE broadcaster, and grouped session writer.
 //
 // Two output modes:
@@ -47,7 +49,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
 	"go.uber.org/zap"
 )
 
@@ -62,13 +64,25 @@ type EventWriter interface {
 // fanout, and the HTTP server. Both Writer and GroupedWriter embed it to
 // avoid duplicating the fanoutSSE / startSSE / handleSSE methods.
 type sseBroadcaster struct {
-	clients map[chan []byte]struct{}
-	mu      sync.RWMutex
-	logger  *zap.Logger
+	clients        map[chan []byte]struct{}
+	mu             sync.RWMutex
+	logger         *zap.Logger
+	allowedOrigins map[string]struct{}
 }
 
-func newSSEBroadcaster(logger *zap.Logger) sseBroadcaster {
-	return sseBroadcaster{clients: make(map[chan []byte]struct{}), logger: logger}
+func newSSEBroadcaster(logger *zap.Logger, allowedOrigins []string) sseBroadcaster {
+	allow := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		if o == "" {
+			continue
+		}
+		allow[o] = struct{}{}
+	}
+	return sseBroadcaster{
+		clients:        make(map[chan []byte]struct{}),
+		logger:         logger,
+		allowedOrigins: allow,
+	}
 }
 
 func (b *sseBroadcaster) fanout(data []byte) {
@@ -83,6 +97,11 @@ func (b *sseBroadcaster) fanout(data []byte) {
 }
 
 func (b *sseBroadcaster) handleSSE(rw http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if _, ok := b.allowedOrigins[origin]; ok && origin != "" {
+		rw.Header().Set("Access-Control-Allow-Origin", origin)
+		rw.Header().Set("Vary", "Origin")
+	}
 	ch := sseConnect(rw, r, b.logger)
 	defer sseDisconnect(rw, r, ch, &b.mu, b.clients, b.logger)
 
@@ -109,10 +128,13 @@ type Writer struct {
 
 // New creates a Writer that emits flat NDJSON to w.
 // If listenAddr is non-empty, an SSE server is started on that address.
-func New(w io.Writer, listenAddr string, logger *zap.Logger) *Writer {
+// allowedOrigins controls which browser Origins may receive CORS headers
+// from the SSE endpoint; other origins are still served but the browser
+// will block the response.
+func New(w io.Writer, listenAddr string, logger *zap.Logger, allowedOrigins []string) *Writer {
 	wr := &Writer{
 		w:   w,
-		sse: newSSEBroadcaster(logger),
+		sse: newSSEBroadcaster(logger, allowedOrigins),
 	}
 	if listenAddr != "" {
 		go wr.sse.startSSE(listenAddr)
@@ -134,7 +156,9 @@ func (w *Writer) Write(_ context.Context, ev *consumer.EnrichedEvent) {
 	line := append(data, '\n')
 
 	w.mu.Lock()
-	_, _ = w.w.Write(line)
+	if _, err := w.w.Write(line); err != nil {
+		w.sse.logger.Warn("ndjson write failed", zap.Error(err))
+	}
 	w.mu.Unlock()
 
 	w.sse.fanout(data)
@@ -172,12 +196,14 @@ type sessionGroup struct {
 
 // NewGroupedWriter creates a GroupedWriter that flushes sessions after idleTimeout
 // of inactivity. Call Start(ctx) to enable the background flush goroutine.
-func NewGroupedWriter(w io.Writer, idleTimeout time.Duration, listenAddr string, logger *zap.Logger) *GroupedWriter {
+// allowedOrigins controls which browser Origins may receive CORS headers
+// from the SSE endpoint.
+func NewGroupedWriter(w io.Writer, idleTimeout time.Duration, listenAddr string, logger *zap.Logger, allowedOrigins []string) *GroupedWriter {
 	gw := &GroupedWriter{
 		groups:      make(map[string]*sessionGroup),
 		w:           w,
 		idleTimeout: idleTimeout,
-		sse:         newSSEBroadcaster(logger),
+		sse:         newSSEBroadcaster(logger, allowedOrigins),
 	}
 	if listenAddr != "" {
 		go gw.sse.startSSE(listenAddr)
@@ -281,7 +307,9 @@ func (gw *GroupedWriter) emit(g *sessionGroup) {
 	data = append(data, '\n')
 
 	gw.wmu.Lock()
-	_, _ = gw.w.Write(data)
+	if _, err := gw.w.Write(data); err != nil {
+		gw.sse.logger.Warn("grouped write failed", zap.Error(err))
+	}
 	gw.wmu.Unlock()
 
 	// Fan-out compact (non-indented) version to SSE subscribers
@@ -291,7 +319,10 @@ func (gw *GroupedWriter) emit(g *sessionGroup) {
 
 func healthz(rw http.ResponseWriter, _ *http.Request) {
 	rw.WriteHeader(http.StatusOK)
-	_, _ = rw.Write([]byte("ok"))
+	if _, err := rw.Write([]byte("ok")); err != nil {
+		// Best effort — client may have disconnected.
+		_ = err
+	}
 }
 
 func listenAndServe(addr string, mux *http.ServeMux, logger *zap.Logger) {
@@ -315,9 +346,10 @@ func sseConnect(rw http.ResponseWriter, r *http.Request, logger *zap.Logger) cha
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
 	rw.Header().Set("Connection", "keep-alive")
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.WriteHeader(http.StatusOK)
-	fmt.Fprintf(rw, ": clawsec stream connected\n\n")
+	if _, err := fmt.Fprintf(rw, ": onyx stream connected\n\n"); err != nil {
+		logger.Warn("SSE greeting write failed", zap.Error(err))
+	}
 	if f, ok := rw.(http.Flusher); ok {
 		f.Flush()
 	}

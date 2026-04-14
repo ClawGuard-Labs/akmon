@@ -1,7 +1,9 @@
+//go:build linux
+
 // detector.go — YAML-template-driven risk scorer.
 //
 // Rules are no longer hardcoded Go closures. Instead, each rule is a YAML
-// file under the clawsec-templates directory. The Detector loads all templates at
+// file under the onyx-templates directory. The Detector loads all templates at
 // startup via the templates package, then evaluates them against each event
 // using engine.Evaluate().
 //
@@ -18,9 +20,9 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	tmpl "github.com/clawsec/internal/templates"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/correlator"
+	tmpl "github.com/ClawGuard-Labs/onyx/internal/templates"
 	"go.uber.org/zap"
 )
 

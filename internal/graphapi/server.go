@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package graphapi serves the provenance graph dashboard over HTTP.
 //
 // Routes:
@@ -22,10 +24,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/chagg"
+	"github.com/ClawGuard-Labs/onyx/internal/graph"
 	"go.uber.org/zap"
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/graph"
 )
 
 //go:embed static
@@ -41,7 +43,12 @@ type Server struct {
 }
 
 // New creates a Server bound to addr (e.g. ":9090") backed by g.
-func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger, cfg *aiprofile.Profile) *Server {
+//
+// allowedOrigins is the whitelist of Origin header values the API will
+// echo back in Access-Control-Allow-Origin. Requests whose Origin is not
+// on the list are served without any CORS headers (the browser blocks
+// them). An empty or nil slice disables cross-origin access entirely.
+func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger, cfg *aiprofile.Profile, allowedOrigins []string) *Server {
 	s := &Server{g: g, agg: agg, logger: logger, cfg: cfg}
 
 	mux := http.NewServeMux()
@@ -62,7 +69,7 @@ func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger,
 
 	s.srv = &http.Server{
 		Addr:         addr,
-		Handler:      corsMiddleware(mux),
+		Handler:      corsMiddleware(mux, allowedOrigins),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 0, // SSE connections stream indefinitely
 		IdleTimeout:  120 * time.Second,
@@ -75,7 +82,9 @@ func New(addr string, g *graph.Graph, agg *chagg.Aggregator, logger *zap.Logger,
 func (s *Server) Start(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
-		shutCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		// Detach from ctx (which is already cancelled) but carry its values,
+		// then apply a bounded grace window for in-flight requests.
+		shutCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer cancel()
 		if err := s.srv.Shutdown(shutCtx); err != nil {
 			s.logger.Warn("graphapi: shutdown error", zap.Error(err))
@@ -157,7 +166,9 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 			return
 
 		case <-heartbeat.C:
-			fmt.Fprintf(w, ": heartbeat\n\n")
+			if _, err := fmt.Fprintf(w, ": heartbeat\n\n"); err != nil {
+				return
+			}
 			flusher.Flush()
 
 		case diff, open := <-ch:
@@ -206,13 +217,26 @@ func writeSSEEvent(w http.ResponseWriter, eventType string, v interface{}) error
 	return err
 }
 
-// corsMiddleware adds permissive CORS headers so the Vite dev server
-// (running on a different port during development) can reach the API.
-func corsMiddleware(next http.Handler) http.Handler {
+// corsMiddleware reflects the request Origin back in the CORS headers only when
+// it matches one of the allowed entries. Requests without a matching origin
+// receive no CORS headers at all — the browser will then block the response,
+// which is the safe default for a local-host monitoring tool.
+func corsMiddleware(next http.Handler, allowedOrigins []string) http.Handler {
+	allow := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		if o == "" {
+			continue
+		}
+		allow[o] = struct{}{}
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		origin := r.Header.Get("Origin")
+		if _, ok := allow[origin]; ok && origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -233,7 +257,7 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Try to open the exact path.
 	f, err := h.fs.Open(path)
 	if err == nil {
-		f.Close()
+		_ = f.Close()
 		http.FileServer(h.fs).ServeHTTP(w, r)
 		return
 	}

@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package loader handles loading the compiled eBPF object and attaching
 // all tracepoint programs to their kernel hooks.
 //

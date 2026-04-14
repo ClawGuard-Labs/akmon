@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package provenance tracks file and process taint across sessions.
 //
 // # Problem
@@ -42,9 +44,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/constants"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
 )
 
 // ─── constants ───────────────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ const (
 	downloadCorrelationWindow = 60 * time.Second
 
 	// taintExpiryDuration: tainted PID records are removed after this duration
-	// to prevent unbounded memory growth. See TODO.md for a configurable flag.
+	// to prevent unbounded memory growth.
 	taintExpiryDuration = 2 * time.Hour
 )
 

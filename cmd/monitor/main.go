@@ -1,4 +1,6 @@
-// clawsec — host-level eBPF monitoring for AI agent processes.
+//go:build linux
+
+// Command onyx — host-level eBPF monitoring for AI agent processes.
 //
 // Architecture:
 //
@@ -22,14 +24,15 @@
 //   └─────────────────────────────────────────────────────────────────┘
 //
 // Usage:
-//   sudo ./bin/monitor [flags]
+//   sudo ./bin/onyx [flags]
 //
 // Flags:
 //   --bpf-obj     path to monitor.bpf.o  (auto-detected if not set)
-//   --behavioral-templates  path to behavioral YAML dir (default: ./clawsec-templates/behavioral-templates)
+//   --behavioral-templates  path to behavioral YAML dir (default: ./onyx-templates/behavioral-templates)
 //   --output      JSON output file        (default: stdout)
 //   --sse         SSE listen address      (default: disabled)
 //   --ui          graph dashboard address (default: disabled)
+//   --cors-origin allowed browser Origin for --ui and --sse (repeatable)
 //   --log-level   debug|info|warn|error   (default: info)
 //   --config      path to config.yaml (default: ./config.yaml or beside binary)
 //   --no-tls      disable TLS uprobe capture (default: enabled if libssl found)
@@ -48,17 +51,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/clawsec/internal/aiprofile"
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/correlator"
-	"github.com/clawsec/internal/detector"
-	"github.com/clawsec/internal/graph"
-	"github.com/clawsec/internal/graphapi"
-	"github.com/clawsec/internal/loader"
-	"github.com/clawsec/internal/nucleiscanner"
-	"github.com/clawsec/internal/output"
-	"github.com/clawsec/internal/provenance"
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/chagg"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/correlator"
+	"github.com/ClawGuard-Labs/onyx/internal/detector"
+	"github.com/ClawGuard-Labs/onyx/internal/graph"
+	"github.com/ClawGuard-Labs/onyx/internal/graphapi"
+	"github.com/ClawGuard-Labs/onyx/internal/loader"
+	"github.com/ClawGuard-Labs/onyx/internal/nucleiscanner"
+	"github.com/ClawGuard-Labs/onyx/internal/output"
+	"github.com/ClawGuard-Labs/onyx/internal/provenance"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -68,21 +71,34 @@ var Version = "dev"
 
 // config holds all runtime configuration parsed from flags.
 type config struct {
-	bpfObjPath      string
+	bpfObjPath             string
 	behavioralTemplatesDir string
-	nucleiTemplates string
-	noNuclei        bool
-	outputFile      string
-	sseAddr         string
-	uiAddr          string
-	logLevel        string
-	noTLS           bool
-	grouped         bool
-	groupTimeout    time.Duration
-	compact         bool
-	compactLog      string
-	compactIdle     time.Duration
-	configPath      string
+	nucleiTemplates        string
+	noNuclei               bool
+	outputFile             string
+	sseAddr                string
+	uiAddr                 string
+	logLevel               string
+	noTLS                  bool
+	grouped                bool
+	groupTimeout           time.Duration
+	compact                bool
+	compactLog             string
+	compactIdle            time.Duration
+	configPath             string
+	corsOrigins            stringSlice
+}
+
+// stringSlice implements flag.Value so --cors-origin can be repeated.
+type stringSlice []string
+
+func (s *stringSlice) String() string { return strings.Join(*s, ",") }
+func (s *stringSlice) Set(v string) error {
+	if v == "" {
+		return nil
+	}
+	*s = append(*s, v)
+	return nil
 }
 
 func main() {
@@ -90,8 +106,8 @@ func main() {
 	showVersion := false
 
 	flag.StringVar(&cfg.bpfObjPath, "bpf-obj", "",
-		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/clawsec/)")
-	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./clawsec-templates/behavioral-templates",
+		"Path to monitor.bpf.o (auto-detected: ./bpf/, next to binary, /usr/lib/onyx/)")
+	flag.StringVar(&cfg.behavioralTemplatesDir, "behavioral-templates", "./onyx-templates/behavioral-templates",
 		"Directory containing behavioral YAML detection rules")
 	flag.StringVar(&cfg.nucleiTemplates, "nuclei-templates", "./nuclei-templates",
 		"Directory containing Nuclei YAML templates for active scanning")
@@ -119,12 +135,22 @@ func main() {
 		"Idle window before finalizing a process chain")
 	flag.StringVar(&cfg.configPath, "config", "",
 		"Path to config.yaml (AI ports, extensions, process names, categories). If empty, searches ./config.yaml then beside the binary")
+	flag.Var(&cfg.corsOrigins, "cors-origin",
+		"Allowed browser Origin for the dashboard API and SSE endpoint (repeatable). "+
+			"Defaults to http://localhost:9090 and http://127.0.0.1:9090.")
 	flag.BoolVar(&showVersion, "version", false,
 		"Print version and exit")
 	flag.Parse()
 
+	if len(cfg.corsOrigins) == 0 {
+		cfg.corsOrigins = stringSlice{
+			"http://localhost:9090",
+			"http://127.0.0.1:9090",
+		}
+	}
+
 	if showVersion {
-		fmt.Printf("clawsec %s\n", Version)
+		fmt.Printf("onyx %s\n", Version)
 		os.Exit(0)
 	}
 
@@ -199,7 +225,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	//   - every YAML template file (behavioral + nuclei)
 	//
 	// We resolve the binary path via os.Executable() so it works whether the
-	// user ran ./bin/monitor or /usr/local/bin/clawsec.
+	// user ran ./bin/onyx or /usr/local/bin/onyx.
 	protectedPaths := collectProtectedPaths(cfg, bpfPath, logger)
 	if err := objs.PopulateProtectionMaps(selfPID, protectedPaths, logger); err != nil {
 		// Non-fatal: log and continue.  LSM hooks will simply allow everything
@@ -231,7 +257,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	det, err := detector.New(logger, cfg.behavioralTemplatesDir)
 	if err != nil {
 		return fmt.Errorf("loading detection templates: %w\n"+
-			"  Clone clawsec-templates alongside this binary (./clawsec-templates/behavioral-templates)\n"+
+			"  Clone onyx-templates alongside this binary (./onyx-templates/behavioral-templates)\n"+
 			"  or pass: --behavioral-templates /path/to/behavioral-templates", err)
 	}
 
@@ -255,7 +281,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 			return fmt.Errorf("opening rules file %q: %w", rulesPath, err)
 		}
 		defer rulesFile.Close()
-		rulesOut = output.New(rulesFile, "", logger)
+		rulesOut = output.New(rulesFile, "", logger, nil)
 
 		logger.Info("JSON output",
 			zap.String("all_events", logsPath),
@@ -265,14 +291,14 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 
 	var out output.EventWriter
 	if cfg.grouped {
-		gw := output.NewGroupedWriter(w, cfg.groupTimeout, cfg.sseAddr, logger)
+		gw := output.NewGroupedWriter(w, cfg.groupTimeout, cfg.sseAddr, logger, cfg.corsOrigins)
 		out = gw
 		go gw.Start(ctx)
 		logger.Info("grouped output enabled",
 			zap.Duration("idle_flush", cfg.groupTimeout),
 			zap.String("group_by", "ai_session_id (parent_comm/ppid in block)"))
 	} else {
-		out = output.New(w, cfg.sseAddr, logger)
+		out = output.New(w, cfg.sseAddr, logger, cfg.corsOrigins)
 	}
 
 	if cfg.sseAddr != "" {
@@ -305,7 +331,7 @@ func run(ctx context.Context, cfg *config, logger *zap.Logger) error {
 	}
 
 	if cfg.uiAddr != "" {
-		uiServer := graphapi.New(cfg.uiAddr, g, agg, logger, aiProf)
+		uiServer := graphapi.New(cfg.uiAddr, g, agg, logger, aiProf, cfg.corsOrigins)
 		go uiServer.Start(ctx)
 	} else {
 		logger.Info("graph dashboard disabled (enable with --ui :<port>)")
@@ -422,7 +448,7 @@ func splitOutputPaths(path string) (logsPath, rulesPath string) {
 //  1. Explicit --bpf-obj flag value
 //  2. Same directory as the running binary (deployment default)
 //  3. bpf/monitor.bpf.o relative to CWD  (development / make run)
-//  4. /usr/lib/clawsec/monitor.bpf.o  (installed via make install)
+//  4. /usr/lib/onyx/monitor.bpf.o  (installed via make install)
 func findBPFObject(flagPath string) (string, error) {
 	candidates := []string{}
 
@@ -437,7 +463,7 @@ func findBPFObject(flagPath string) (string, error) {
 
 	candidates = append(candidates,
 		"bpf/monitor.bpf.o",
-		"/usr/lib/clawsec/monitor.bpf.o",
+		"/usr/lib/onyx/monitor.bpf.o",
 	)
 
 	for _, p := range candidates {

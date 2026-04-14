@@ -1,3 +1,5 @@
+//go:build linux
+
 package graph
 
 import (
@@ -7,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/clawsec/internal/chagg"
-	"github.com/clawsec/internal/constants"
-	"github.com/clawsec/internal/consumer"
-	"github.com/clawsec/internal/provenance"
+	"github.com/ClawGuard-Labs/onyx/internal/chagg"
+	"github.com/ClawGuard-Labs/onyx/internal/constants"
+	"github.com/ClawGuard-Labs/onyx/internal/consumer"
+	"github.com/ClawGuard-Labs/onyx/internal/provenance"
 )
 
 // liveChain tracks a spawned-edge path from a parent for chain-wise compaction.

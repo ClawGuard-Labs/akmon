@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /* monitor.bpf.c — eBPF kernel-side monitoring program
  *
  * Single compilation unit: all programs share the same maps.

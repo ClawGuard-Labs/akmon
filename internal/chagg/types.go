@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package chagg implements chain aggregation — deduplication of repetitive
 // graph edge patterns into counted chains.
 //

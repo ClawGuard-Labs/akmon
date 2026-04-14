@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package consumer — raw eBPF event structs and ring-buffer decoder.
 //
 // These Go structs mirror the C structs in bpf/common.h EXACTLY —
@@ -25,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/clawsec/internal/aiprofile"
+	"github.com/ClawGuard-Labs/onyx/internal/aiprofile"
 )
 
 // ── Event-type constants (must match common.h) ────────────────────────────
