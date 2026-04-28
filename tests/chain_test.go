@@ -8,11 +8,10 @@ import (
 	"github.com/ClawGuard-Labs/akmon/internal/chagg"
 )
 
-var chainLogger = categoryLogger("chain")
-
 // TestChainDedup verifies that two identical edge sequences within the same
 // session are deduplicated into a single Chain with occurrence_count=2.
 func TestChainDedup(t *testing.T) {
+	chainLogger := categoryLogger("chain")
 	agg := chagg.New(50 * time.Millisecond)
 
 	// First occurrence
@@ -74,6 +73,7 @@ func TestChainDedup(t *testing.T) {
 // TestChainExtension verifies that A->B and A->B->C are treated as separate
 // chains (different patterns produce different chain keys).
 func TestChainExtension(t *testing.T) {
+	chainLogger := categoryLogger("chain")
 	agg := chagg.New(50 * time.Millisecond)
 
 	// Short chain: spawned
@@ -112,6 +112,7 @@ func TestChainExtension(t *testing.T) {
 // TestChainSessionIsolation verifies that identical edge patterns in different
 // sessions are NOT deduplicated — each session gets its own Chain entry.
 func TestChainSessionIsolation(t *testing.T) {
+	chainLogger := categoryLogger("chain")
 	agg := chagg.New(50 * time.Millisecond)
 
 	// Session A
@@ -148,6 +149,7 @@ func TestChainSessionIsolation(t *testing.T) {
 // TestChainFinalization verifies that chains are finalized after the idle
 // window expires and appear in the snapshot.
 func TestChainFinalization(t *testing.T) {
+	chainLogger := categoryLogger("chain")
 	agg := chagg.New(50 * time.Millisecond)
 
 	agg.TrackEdge("proc:700", "systemd", "sshd", "sshd -D",
