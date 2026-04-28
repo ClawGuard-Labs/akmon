@@ -38,6 +38,14 @@ type Builder struct {
 	chains       []*liveChain
 	leafToChain  map[string]*liveChain
 	parentChains map[string][]*liveChain
+
+	// alertDedup suppresses near-simultaneous duplicate alerts for the same PID
+	// and alert category (rule/template ID). This prevents alert spam when multiple
+	// events trigger the same category concurrently for a single process.
+	//
+	// Key format: "<pid>|<category>"
+	alertDedup       map[string]time.Time
+	alertDedupWindow time.Duration
 }
 
 // NewBuilder returns a Builder wired to g.
@@ -50,12 +58,44 @@ func NewBuilder(g *Graph, agg *chagg.Aggregator, compact bool, compactIdle time.
 		chagg:       agg,
 		compact:     compact,
 		compactIdle: compactIdle,
+		// Default: suppress duplicates that arrive within this window.
+		// This matches the "same timestamp / nearly the same time" spam scenario.
+		alertDedupWindow: 1 * time.Second,
+		alertDedup:       make(map[string]time.Time),
 	}
 	if compact {
 		b.leafToChain = make(map[string]*liveChain)
 		b.parentChains = make(map[string][]*liveChain)
 	}
 	return b
+}
+
+// shouldEmitAlert reports whether an alert for (pid, category) should be emitted
+// at the given time. When an alert is emitted, the category becomes "active" for
+// alertDedupWindow to prevent concurrent duplicates.
+//
+// Caller must hold b.g.mu.
+func (b *Builder) shouldEmitAlert(pid uint32, category string, now time.Time) bool {
+	if category == "" {
+		return true
+	}
+	key := fmt.Sprintf("%d|%s", pid, category)
+	if last, ok := b.alertDedup[key]; ok {
+		if now.Sub(last) < b.alertDedupWindow {
+			return false
+		}
+	}
+	b.alertDedup[key] = now
+
+	// Opportunistic GC to keep the map bounded.
+	// Remove entries older than 10× the window.
+	cutoff := now.Add(-10 * b.alertDedupWindow)
+	for k, t := range b.alertDedup {
+		if t.Before(cutoff) {
+			delete(b.alertDedup, k)
+		}
+	}
+	return true
 }
 
 // Process inspects ev and taint and applies the resulting graph mutations.
@@ -220,6 +260,9 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 
 	// ── Alerts for matched detection rules ────────────────────────────────
 	for _, rule := range ev.MatchedRules {
+		if !b.shouldEmitAlert(ev.Pid, rule.ID, now) {
+			continue
+		}
 		a := b.newAlert(
 			rule.Severity,
 			ev.RiskScore,
@@ -235,6 +278,11 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 
 	// ── Alert for Nuclei findings ─────────────────────────────────────────
 	if ev.NucleiResult != nil {
+		category := "nuclei:" + ev.NucleiResult.TemplateID
+		if category == "nuclei:" {
+			category = "nuclei:" + ev.NucleiResult.Name
+		}
+		if b.shouldEmitAlert(ev.Pid, category, now) {
 		a := b.newAlert(
 			ev.NucleiResult.Severity,
 			constants.SeverityScore(ev.NucleiResult.Severity),
@@ -246,6 +294,7 @@ func (b *Builder) Process(ev *consumer.EnrichedEvent, taint provenance.TaintInfo
 		)
 		b.g.storeAlert(a)
 		diff.Alerts = append(diff.Alerts, a)
+		}
 	}
 
 	b.g.mu.Unlock()
